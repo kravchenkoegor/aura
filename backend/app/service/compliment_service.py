@@ -19,12 +19,12 @@ class ComplimentService:
     candidates: list[ComplimentOutput],
   ) -> list[Compliment]:
     """Creates compliments for a given image based on the candidates provided.
-      Args:
-        image_id (uuid.UUID): The ID of the image for which compliments are being created.
-        generation_metadata_id (uuid.UUID): The ID of the generation metadata associated with the compliments.
-        candidates (list[ComplimentOutput]): A list of candidates containing the compliments and their analysis.
-      Returns:
-        list[Compliment]: A list of created Compliment objects with their IDs and other details.  
+    Args:
+      image_id (uuid.UUID): The ID of the image for which compliments are being created.
+      generation_metadata_id (uuid.UUID): The ID of the generation metadata associated with the compliments.
+      candidates (list[ComplimentOutput]): A list of candidates containing the compliments and their analysis.
+    Returns:
+      list[Compliment]: A list of created Compliment objects with their IDs and other details.
     """
 
     def _create_compliments_sync() -> list[Compliment]:
@@ -35,10 +35,10 @@ class ComplimentService:
           Compliment(
             image_id=image_id,
             # TODO: replace with actual language ID
-            lang_id=uuid.UUID('923eebd0-4219-4574-8709-7d661cbbd0be'),
+            lang_id=uuid.UUID("923eebd0-4219-4574-8709-7d661cbbd0be"),
             generation_id=generation_metadata_id,
             text=candidate.comment.text,
-            tone_breakdown=candidate.analysis.tone_breakdown.dict()
+            tone_breakdown=candidate.analysis.tone_breakdown.dict(),
           )
         )
 

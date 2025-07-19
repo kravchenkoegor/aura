@@ -1,11 +1,13 @@
-from app.data.language import create_languages
-from app.data.user import create_user
-from app.core.config import settings
-
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+  async_sessionmaker,
+  create_async_engine,
+)
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.config import settings
+from app.data.language import create_languages
+from app.data.user import create_user
 from app.models import User
 from app.schemas import UserCreate
 
@@ -22,9 +24,7 @@ async_session = async_sessionmaker(
 
 
 async def init_db(session: AsyncSession) -> None:
-  user_stmt = select(User).where(
-    User.email == settings.FIRST_SUPERUSER
-  )
+  user_stmt = select(User).where(User.email == settings.FIRST_SUPERUSER)
   result = await session.exec(user_stmt)
   user = result.first()
 

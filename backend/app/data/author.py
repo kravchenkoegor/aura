@@ -1,7 +1,8 @@
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
-from typing import Optional
 import uuid
+from typing import Optional
+
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import Author
 

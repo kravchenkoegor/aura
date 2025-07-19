@@ -3,9 +3,9 @@ from fastapi import APIRouter
 from app.api.routes import (
   compliments,
   login,
+  posts,
   private,
   proxy,
-  posts,
   tasks,
   utils,
 )

@@ -1,8 +1,9 @@
+from typing import Optional
+
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel.sql.expression import Select, SelectOfScalar
-from typing import Optional
 
 from app.models import Post
 from app.schemas import PostUpdate
@@ -43,9 +44,7 @@ async def get_post_by_id(session: AsyncSession, post_id: str) -> Optional[Post]:
   """
 
   stmt: Statement = (
-    select(Post)
-    .where(Post.id == post_id)
-    .options(selectinload(Post.images))  # type: ignore
+    select(Post).where(Post.id == post_id).options(selectinload(Post.images))  # type: ignore
   )
   result = await session.exec(stmt)
   post = result.one_or_none()

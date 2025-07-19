@@ -1,0 +1,6 @@
+[tool.ruff]
+target-version = "py311"
+indent-width = 2
+
+[tool.ruff.format]
+quote-style = "double"

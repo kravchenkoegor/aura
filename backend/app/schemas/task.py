@@ -1,22 +1,22 @@
 import uuid
-
 from datetime import datetime, timedelta
 from enum import Enum
-from sqlmodel import SQLModel
 from typing import Optional
+
+from sqlmodel import SQLModel
 
 
 class TaskType(str, Enum):
-  llm_generate = 'llm_generate'
-  instagram_download = 'instagram_download'
+  llm_generate = "llm_generate"
+  instagram_download = "instagram_download"
 
 
 class TaskStatus(str, Enum):
-  pending = 'pending'
-  in_progress = 'in_progress'
-  done = 'done'
-  failed = 'failed'
-  skipped = 'skipped'
+  pending = "pending"
+  in_progress = "in_progress"
+  done = "done"
+  failed = "failed"
+  skipped = "skipped"
 
 
 class TaskBase(SQLModel):

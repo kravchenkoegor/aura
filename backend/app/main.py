@@ -1,6 +1,7 @@
 # import sentry_sdk
-from contextlib import asynccontextmanager
 import os
+from contextlib import asynccontextmanager
+
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
@@ -14,7 +15,7 @@ load_dotenv()
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:
-  return f'{route.tags[0]}-{route.name}'
+  return f"{route.tags[0]}-{route.name}"
 
 
 redis_client: Redis | None = None
@@ -60,7 +61,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
   title=settings.PROJECT_NAME,
-  openapi_url='/openapi.json',
+  openapi_url="/openapi.json",
   generate_unique_id_function=custom_generate_unique_id,
   lifespan=lifespan,
 )
@@ -71,8 +72,8 @@ if settings.all_cors_origins:
     CORSMiddleware,
     allow_origins=settings.all_cors_origins,
     allow_credentials=True,
-    allow_methods=['*'],
-    allow_headers=['*'],
+    allow_methods=["*"],
+    allow_headers=["*"],
   )
 
 app.include_router(api_router)

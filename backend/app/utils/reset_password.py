@@ -1,6 +1,6 @@
-import jwt
-
 from datetime import datetime, timedelta, timezone
+
+import jwt
 from jwt.exceptions import InvalidTokenError
 
 from app.core import security
@@ -13,7 +13,7 @@ def generate_password_reset_token(email: str) -> str:
   expires = now + delta
   exp = expires.timestamp()
   encoded_jwt = jwt.encode(
-    {'exp': exp, 'nbf': now, 'sub': email},
+    {"exp": exp, "nbf": now, "sub": email},
     settings.SECRET_KEY,
     algorithm=security.ALGORITHM,
   )
@@ -28,7 +28,7 @@ def verify_password_reset_token(token: str) -> str | None:
       algorithms=[security.ALGORITHM],
     )
 
-    return str(decoded_token['sub'])
+    return str(decoded_token["sub"])
 
   except InvalidTokenError:
     return None

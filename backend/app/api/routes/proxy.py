@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import StreamingResponse
 import httpx
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 
-router = APIRouter(prefix='/proxy', tags=['proxy'])
+router = APIRouter(prefix="/proxy", tags=["proxy"])
 
 
 @router.get("/{url:path}")
@@ -39,19 +39,22 @@ async def proxy_image(url: str, request: Request):
         await client.aclose()
 
     return StreamingResponse(
-        stream_body_and_close_resources(),
-        media_type=response.headers.get(
-            "content-type", "image/jpeg"),
-        headers={"Access-Control-Allow-Origin": "*"},
+      stream_body_and_close_resources(),
+      media_type=response.headers.get("content-type", "image/jpeg"),
+      headers={"Access-Control-Allow-Origin": "*"},
     )
   except httpx.HTTPStatusError as e:
     await client.aclose()
-    raise HTTPException(status_code=e.response.status_code,
-                        detail="Upstream image not found or failed.")
+    raise HTTPException(
+      status_code=e.response.status_code,
+      detail="Upstream image not found or failed.",
+    )
   except httpx.RequestError:
     await client.aclose()
     raise HTTPException(
-        status_code=502, detail="Could not connect to the upstream server.")
+      status_code=502,
+      detail="Could not connect to the upstream server.",
+    )
   except Exception:
     await client.aclose()
     raise

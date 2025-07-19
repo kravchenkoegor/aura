@@ -1,40 +1,49 @@
 import os
 import uuid
-
-from fastapi import APIRouter, HTTPException, Request, status
-from pydantic import BaseModel
 from typing import Any, Optional
 
+from fastapi import (
+  APIRouter,
+  HTTPException,
+  Request,
+  status,
+)
+from pydantic import BaseModel
+
 from app.api.deps import AsyncSessionDep
+from app.schemas import (
+  PostPublic,
+  TaskCreate,
+  TaskType,
+)
 from app.service.post_service import PostService
 from app.service.task_service import TaskService
-from app.schemas import PostPublic, TaskCreate, TaskType
 from app.utils.instagram import extract_shortcode_from_url
 
 STREAM_NAME = os.getenv("REDIS_STREAM", "tasks:instagram_download:stream")
 
-REDIS_CHANNEL_OUTPUT = 'tasks:instagram_download:output'
+REDIS_CHANNEL_OUTPUT = "tasks:instagram_download:output"
 
-router = APIRouter(prefix='/posts', tags=['posts'])
+router = APIRouter(prefix="/posts", tags=["posts"])
 
 
 class PostImportRequest(BaseModel):
   url: str
 
 
-@router.post('/', status_code=status.HTTP_200_OK)
+@router.post("/", status_code=status.HTTP_200_OK)
 async def create_post(
   *,
   request: Request,
   session: AsyncSessionDep,
   obj_in: PostImportRequest,
 ) -> Any:
-  '''
+  """
   Import an Instagram post from a URL.
 
   This will fetch the post metadata from Instagram,
   create the author, post, and image records in the database.
-  '''
+  """
 
   post_service = PostService(session=session)
   task_service = TaskService(session=session)
@@ -66,24 +75,21 @@ async def create_post(
       {
         "task_id": str(task_id),
         "url": obj_in.url,
-      }
+      },
     )
 
     return {
-      'task_id': task_id,
+      "task_id": task_id,
     }
 
   except ValueError as e:
     raise HTTPException(status_code=400, detail=str(e))
 
   except Exception as e:
-    raise HTTPException(
-      status_code=500,
-      detail=f'An unexpected error occurred: {e}'
-    )
+    raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
 
 
-@router.get('/{post_id}', response_model=Optional[PostPublic])
+@router.get("/{post_id}", response_model=Optional[PostPublic])
 async def get_post_by_id(
   *,
   session: AsyncSessionDep,

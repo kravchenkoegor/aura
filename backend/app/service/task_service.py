@@ -1,5 +1,6 @@
-from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import Optional
+
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.data import task as task_repo
 from app.models import Task

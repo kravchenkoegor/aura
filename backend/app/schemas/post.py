@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime
-from sqlmodel import SQLModel
 from typing import List, Optional
+
+from sqlmodel import SQLModel
 
 from .image import ImagePublic
 

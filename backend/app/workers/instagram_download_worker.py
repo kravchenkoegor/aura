@@ -5,16 +5,27 @@ import os
 import time
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
+
 from dotenv import load_dotenv
 from redis.asyncio import from_url
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.db import async_engine
-from app.data.author import create_author, get_author_by_id
-from app.data.image import create_images, get_primary_image_by_post_id
+from app.data.author import (
+  create_author,
+  get_author_by_id,
+)
+from app.data.image import (
+  create_images,
+  get_primary_image_by_post_id,
+)
 from app.data.post import update_post
 from app.data.task import update_task
-from app.schemas import PostUpdate, TaskStatus, TaskUpdate
+from app.schemas import (
+  PostUpdate,
+  TaskStatus,
+  TaskUpdate,
+)
 from app.service.instagram import download_instagram_post
 from app.utils.instagram import extract_shortcode_from_url
 
@@ -23,7 +34,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 logging.basicConfig(
   level=logging.INFO,
-  format="%(asctime)s %(levelname)s: %(message)s"
+  format="%(asctime)s %(levelname)s: %(message)s",
 )
 
 REDIS_STREAM = os.getenv("REDIS_STREAM", "tasks:instagram_download:stream")
@@ -53,7 +64,10 @@ async def handle_message(
 
   try:
     post_id = extract_shortcode_from_url(url)
-    existing_image = await get_primary_image_by_post_id(session=session, post_id=post_id)
+    existing_image = await get_primary_image_by_post_id(
+      session=session,
+      post_id=post_id,
+    )
     if existing_image:
       logger.info(f"Post {post_id} already downloaded. Skipping.")
 
@@ -132,11 +146,7 @@ async def handle_message(
 async def _process_entry(redis_client, entry_id: str, data: dict):
   """Обработка одной записи из Stream."""
   try:
-    payload = {
-      k: json.loads(v)
-        if v.startswith("{")
-        else v for k, v in data.items()
-    }
+    payload = {k: json.loads(v) if v.startswith("{") else v for k, v in data.items()}
 
     print(payload)
 
@@ -159,15 +169,7 @@ async def start_worker(concurrency: int = 3):
 
   redis_client = from_url(redis_url, decode_responses=True)
 
-  # Создаём consumer group (если нет)
   try:
-    # await asyncio.to_thread(
-    #   redis_client.xgroup_create,
-    #   REDIS_STREAM,
-    #   CONSUMER_GROUP,
-    #   id="0",
-    #   mkstream=True,
-    # )
     await redis_client.xgroup_create(
       name=REDIS_STREAM,
       groupname=CONSUMER_GROUP,
@@ -216,7 +218,8 @@ async def start_worker(concurrency: int = 3):
 
 if __name__ == "__main__":
   try:
-    asyncio.run(start_worker(concurrency=int(
-        os.getenv("WORKER_CONCURRENCY", "3"))))
+    concurrency = int(os.getenv("WORKER_CONCURRENCY", "3"))
+    asyncio.run(start_worker(concurrency))
+
   except KeyboardInterrupt:
     print("Worker stopped by user.")

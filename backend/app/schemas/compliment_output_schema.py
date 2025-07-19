@@ -17,7 +17,7 @@ class ToneBreakdown(BaseModel):
 class Analysis(BaseModel):
   rationale: str
   approach_used: str
-  tone_breakdown: ToneBreakdown = Field(..., alias='tone_breakdown')
+  tone_breakdown: ToneBreakdown = Field(..., alias="tone_breakdown")
 
 
 class ComplimentOutput(BaseModel):

@@ -1,5 +1,6 @@
-from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import Optional
+
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.data.post import create_post, get_post_by_id, update_post
 from app.schemas import PostPublic, PostUpdate

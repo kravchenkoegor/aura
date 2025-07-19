@@ -4,10 +4,10 @@ from fastapi import (
   WebSocketDisconnect,
 )
 
-router = APIRouter(tags=['websockets'])
+router = APIRouter(tags=["websockets"])
 
 
-@router.websocket('/ws/{task_id}')
+@router.websocket("/ws/{task_id}")
 async def websocket_post_status(
   websocket: WebSocket,
   task_id: str,

@@ -1,6 +1,7 @@
+import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
-import uuid
+
 from sqlalchemy import TIMESTAMP, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, Relationship, SQLModel
@@ -14,28 +15,28 @@ if TYPE_CHECKING:
 
 
 class Compliment(SQLModel, table=True):
-  '''
+  """
   Represents the final, generated compliment for a specific image.
   This is the core creative output of the application.
-  '''
+  """
 
-  __tablename__ = 'compliments'  # type: ignore
+  __tablename__ = "compliments"  # type: ignore
 
   id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
   image_id: uuid.UUID = Field(
-    foreign_key='images.id',
+    foreign_key="images.id",
     nullable=False,
-    ondelete='CASCADE',
+    ondelete="CASCADE",
   )
   lang_id: str = Field(
-    foreign_key='languages.id',
+    foreign_key="languages.id",
     nullable=False,
-    ondelete='RESTRICT',
+    ondelete="RESTRICT",
   )
   generation_id: uuid.UUID = Field(
-    foreign_key='generation_metadata.id',
+    foreign_key="generation_metadata.id",
     nullable=False,
-    ondelete='RESTRICT',
+    ondelete="RESTRICT",
   )
   text: str = Field(sa_column=Column(Text, nullable=False))
   tone_breakdown: dict | None = Field(default=None, sa_column=Column(JSONB))
@@ -45,15 +46,13 @@ class Compliment(SQLModel, table=True):
   )
 
   # Relationship: A compliment is for one image
-  image: 'Image' = Relationship(back_populates='compliments')
+  image: "Image" = Relationship(back_populates="compliments")
 
   # Relationship: A compliment is in one language
-  language: 'Language' = Relationship(back_populates='compliments')
+  language: "Language" = Relationship(back_populates="compliments")
 
   # Relationship: A compliment has one set of generation metadata
-  generation_metadata: 'GenerationMetadata' = Relationship(
-    back_populates='compliments'
-  )
+  generation_metadata: "GenerationMetadata" = Relationship(back_populates="compliments")
 
   def __repr__(self):
-    return f'<Compliment(id={self.id}, image_id={self.image_id})>'
+    return f"<Compliment(id={self.id}, image_id={self.image_id})>"

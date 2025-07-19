@@ -1,10 +1,11 @@
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from typing import Optional
-from datetime import datetime, timedelta, timezone
 
 from app.models import Task
-from app.schemas import TaskCreate, TaskUpdate, TaskStatus
+from app.schemas import TaskCreate, TaskStatus, TaskUpdate
 
 
 async def create_task(session: AsyncSession, task_create: TaskCreate) -> Task:
@@ -14,7 +15,7 @@ async def create_task(session: AsyncSession, task_create: TaskCreate) -> Task:
     post_id=task_create.post_id,
     image_id=task_create.image_id,
     status=TaskStatus.pending,
-    created_at=datetime.now(timezone.utc)
+    created_at=datetime.now(timezone.utc),
   )
 
   session.add(task)
