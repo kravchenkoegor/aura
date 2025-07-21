@@ -10,14 +10,13 @@ from fastapi import (
 )
 from pydantic import BaseModel
 
-from app.api.deps import AsyncSessionDep
+from app.api.deps import AsyncSessionDep, TaskServiceDep
 from app.schemas import (
   PostPublic,
   TaskCreate,
   TaskType,
 )
 from app.service.post_service import PostService
-from app.service.task_service import TaskService
 from app.utils.instagram import extract_shortcode_from_url
 
 STREAM_NAME = os.getenv("REDIS_STREAM", "tasks:instagram_download:stream")
@@ -36,6 +35,7 @@ async def create_post(
   *,
   request: Request,
   session: AsyncSessionDep,
+  task_service: TaskServiceDep,
   obj_in: PostImportRequest,
 ) -> Any:
   """
@@ -46,7 +46,6 @@ async def create_post(
   """
 
   post_service = PostService(session=session)
-  task_service = TaskService(session=session)
 
   try:
     task_id = uuid.uuid4()

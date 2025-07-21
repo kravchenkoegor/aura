@@ -2,26 +2,26 @@ import json
 import os
 from datetime import datetime
 
-import requests
+import httpx
 from dotenv import load_dotenv
-from fastapi.concurrency import run_in_threadpool
 from google import genai
 from google.genai import types
 from pydantic import ValidationError
-from sqlmodel import Session, select
+from sqlmodel import select
 
+from app.api.deps import AsyncSessionDep
 from app.models import (
   GenerationMetadata,
   Image,
   Post,
 )
-from app.schemas.compliment_output_schema import ComplimentOutput
+from app.schemas import ComplimentOutput
 
 load_dotenv()
 
 
 class GeminiService:
-  def __init__(self, session: Session):
+  def __init__(self, session: AsyncSessionDep):
     self.session = session
 
     self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
@@ -30,7 +30,12 @@ class GeminiService:
     self.model = "gemini-2.5-flash"
 
   def _get_system_prompt(self) -> str:
-    file_path = os.getenv("SYSTEM_PROMPT_PATH")
+    print(os.getcwd())
+    # file_path = os.getenv("SYSTEM_PROMPT_PATH")
+    file_path = os.path.join(
+      os.getcwd(),
+      "app/service/gemini_service/prompts/structured_json.md",
+    )
     if not file_path:
       raise FileNotFoundError("SYSTEM_PROMPT_PATH is not set")
 
@@ -39,100 +44,77 @@ class GeminiService:
 
   async def create_chat(
     self,
+    session: AsyncSessionDep,
     post_id: str,
     style: str,
-  ):
-    """Creates a new chat session with the specified model."""
+  ) -> tuple[GenerationMetadata, list[ComplimentOutput]]:
+    start_time = datetime.now()
 
-    print("selected style:", style)
+    existing_post = await session.get(Post, post_id)
+    if not existing_post:
+      raise ValueError(f"Post with ID {post_id} not found")
 
-    def _sync_create_chat() -> tuple[GenerationMetadata, list[ComplimentOutput]]:
-      start_time = datetime.now()
+    result = await session.exec(
+      select(Image).where(
+        Image.post_id == post_id,
+        Image.is_primary,
+      ),
+    )
+    primary_image = result.first()
 
-      chat = self.client.chats.create(
-        model=self.model,
-        config=types.GenerateContentConfig(
-          temperature=1.5,
-          top_p=0.95,
-          candidate_count=3,
-          response_mime_type="application/json",
-        ),
-      )
+    if not primary_image:
+      raise ValueError(f"Primary image for post {post_id} not found")
 
-      existing_post = self.session.get(Post, post_id)
+    async with httpx.AsyncClient() as client:
+      http_response = await client.get(primary_image.storage_key)
+      http_response.raise_for_status()
+      image_bytes = http_response.content
 
-      if not existing_post:
-        raise ValueError(f"Post with ID {post_id} not found")
+    image_part = types.Part.from_bytes(
+      data=image_bytes,
+      mime_type="image/jpeg",
+    )
 
-      # Query for the primary image
-      primary_image = self.session.exec(
-        select(Image).where(
-          Image.post_id == post_id,
-          Image.is_primary,
-        )
-      ).first()
+    chat = self.client.aio.chats.create(model=self.model)
 
-      if not primary_image:
-        raise ValueError(f"Primary image for post {post_id} not found")
+    response = await chat.send_message(
+      message=[image_part, self.system_prompt],
+      config=types.GenerateContentConfig(
+        temperature=1.5,
+        top_p=0.95,
+        candidate_count=3,
+        response_mime_type="application/json",
+      ),
+    )
 
-      image_bytes = requests.get(primary_image.storage_key).content
-      image = types.Part.from_bytes(
-        data=image_bytes,
-        mime_type="image/jpeg",
-      )
+    end_time = datetime.now()
 
-      response = chat.send_message(
-        [
-          image,
-          self.system_prompt,
-        ]
-      )
+    usage = response.usage_metadata
+    generation_metadata = GenerationMetadata(
+      model_used=self.model,
+      prompt_token_count=usage.prompt_token_count if usage else 0,
+      candidates_token_count=usage.candidates_token_count if usage else 0,
+      total_token_count=usage.total_token_count if usage else 0,
+      analysis_duration_ms=int((end_time - start_time).total_seconds() * 1000),
+    )
 
-      end_time = datetime.now()
+    session.add(generation_metadata)
+    await session.commit()
+    await session.refresh(generation_metadata)
 
-      prompt_token_count = (
-        response.usage_metadata.prompt_token_count if response.usage_metadata else 0
-      )
-      candidates_token_count = (
-        response.usage_metadata.candidates_token_count if response.usage_metadata else 0
-      )
-      total_token_count = (
-        response.usage_metadata.total_token_count if response.usage_metadata else 0
-      )
+    candidates: list[ComplimentOutput] = []
+    if response.candidates:
+      for i, candidate in enumerate(response.candidates, 1):
+        if candidate.content and candidate.content.parts:
+          response_text = candidate.content.parts[0].text or ""
+          try:
+            validated_output = ComplimentOutput.model_validate_json(
+              response_text,
+            )
+            candidates.append(validated_output)
+          except (json.JSONDecodeError, ValidationError) as e:
+            # Рекомендуется использовать логгер вместо print
+            print(f"Invalid response format for candidate {i}: {e}")
+            continue
 
-      generation_metadata = GenerationMetadata(
-        model_used=self.model,
-        prompt_token_count=prompt_token_count or 0,
-        candidates_token_count=candidates_token_count or 0,
-        total_token_count=total_token_count or 0,
-        analysis_duration_ms=int((end_time - start_time).total_seconds() * 1000),
-      )
-
-      self.session.add(generation_metadata)
-
-      candidates: list[ComplimentOutput] = []
-
-      if response.candidates and len(response.candidates) > 0:
-        for i, candidate in enumerate(response.candidates, 1):
-          if (
-            candidate.content
-            and candidate.content.parts
-            and len(candidate.content.parts) > 0
-          ):
-            response_text = candidate.content.parts[0].text or ""
-
-            try:
-              # Parse and validate the JSON response
-              response_data = json.loads(response_text)
-              validated_output = ComplimentOutput(**response_data)
-              candidates.append(validated_output)
-
-            except (json.JSONDecodeError, ValidationError) as e:
-              print(f"Invalid response format for candidate {i}: {e}")
-              continue
-
-      self.session.refresh(generation_metadata)
-
-      return (generation_metadata, candidates)
-
-    return await run_in_threadpool(_sync_create_chat)
+    return (generation_metadata, candidates)

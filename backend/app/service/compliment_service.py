@@ -3,7 +3,6 @@ import uuid
 from fastapi.concurrency import run_in_threadpool
 from sqlmodel import Session
 
-from app.data.image import get_primary_image_by_post_id
 from app.models import Compliment
 from app.schemas.compliment_output_schema import ComplimentOutput
 
@@ -52,15 +51,3 @@ class ComplimentService:
       return compliments
 
     return await run_in_threadpool(_create_compliments_sync)
-
-  async def get_primary_image_by_post_id(
-    self,
-    post_id: str,
-  ):
-    """Fetches the primary image for a given post ID."""
-
-    return await run_in_threadpool(
-      get_primary_image_by_post_id,
-      session=self.session,
-      post_id=post_id,
-    )

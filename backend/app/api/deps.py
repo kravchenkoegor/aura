@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.core.db import async_session
 from app.models import User
 from app.schemas import TokenPayload
+from app.service.task_service import TaskService
 
 reusable_oauth2 = OAuth2PasswordBearer(tokenUrl="/login/access-token")
 
@@ -60,3 +61,10 @@ def get_current_active_superuser(current_user: CurrentUser) -> User:
       status_code=403, detail="The user doesn't have enough privileges"
     )
   return current_user
+
+
+def get_task_service(session: AsyncSessionDep) -> TaskService:
+  return TaskService(session=session)
+
+
+TaskServiceDep = Annotated[TaskService, Depends(get_task_service)]

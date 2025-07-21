@@ -1,10 +1,14 @@
-from typing import Optional
+from typing import Optional, Sequence
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.data import task as task_repo
-from app.models import Task
-from app.schemas import TaskCreate, TaskPublic, TaskStatus, TaskUpdate
+from app.schemas import (
+  TaskCreate,
+  TaskPublic,
+  TaskStatus,
+  TaskUpdate,
+)
 
 
 class TaskService:
@@ -32,20 +36,35 @@ class TaskService:
     self,
     task_id: str,
     task_update: TaskUpdate,
-  ) -> Optional[Task]:
-    return await task_repo.update_task(
+  ) -> Optional[TaskPublic]:
+    updated_task = await task_repo.update_task(
       session=self.session,
       task_id=task_id,
       task_update=task_update,
     )
 
+    if updated_task:
+      return TaskPublic.model_validate(updated_task, from_attributes=True)
+
   async def set_status(
     self,
     task_id: str,
     status: TaskStatus,
-  ) -> Optional[Task]:
-    return await task_repo.set_task_status(
+  ) -> Optional[TaskPublic]:
+    updated_task = await task_repo.set_task_status(
       session=self.session,
       task_id=task_id,
       status=status,
     )
+
+    if updated_task:
+      return TaskPublic.model_validate(updated_task, from_attributes=True)
+
+  async def get_all_tasks(self, skip: int, limit: int) -> Sequence[TaskPublic]:
+    tasks = await task_repo.get_all_tasks(
+      session=self.session,
+      skip=skip,
+      limit=limit,
+    )
+
+    return [TaskPublic.model_validate(task, from_attributes=True) for task in tasks]

@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Sequence
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -71,3 +71,20 @@ async def set_task_status(
   await session.refresh(task)
 
   return task
+
+
+async def get_all_tasks(
+  session: AsyncSession,
+  skip: int,
+  limit: int,
+  status: Optional[str] = None,
+) -> Sequence[Task]:
+  query = select(Task).order_by(Task.created_at.desc())
+
+  if status:
+    query = query.where(Task.status == status)
+
+  query = query.offset(skip).limit(limit)
+
+  result = await session.exec(query)
+  return result.all()

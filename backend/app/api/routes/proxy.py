@@ -1,60 +1,89 @@
+import logging
+import uuid
+
 import httpx
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import (
+  APIRouter,
+  HTTPException,
+  status,
+)
 from fastapi.responses import StreamingResponse
 
-router = APIRouter(prefix="/proxy", tags=["proxy"])
+from app.api.deps import AsyncSessionDep
+from app.service.image_service import ImageService
+
+logger = logging.getLogger(__name__)
 
 
-@router.get("/{url:path}")
-async def proxy_image(url: str, request: Request):
-  """
-  Proxies image requests to avoid CORS issues. It reconstructs the target
-  URL from the request path and query parameters.
-  Example: /proxy/https://example.com/image.jpg?param=value
-  """
-  # FastAPI's path converter turns "://" into ":/", so we fix it back.
-  if url.startswith("http:/") and not url.startswith("http://"):
-    url = "http://" + url[6:]
-  elif url.startswith("https:/") and not url.startswith("https://"):
-    url = "https://" + url[7:]
+router = APIRouter(prefix="/images", tags=["images"])
 
-  if request.query_params:
-    url += "?" + str(request.query_params)
 
-  client = httpx.AsyncClient()
+@router.get("/{image_id}/view")
+async def view_image_by_id(
+  *,
+  session: AsyncSessionDep,
+  image_id: str,
+):
   try:
-    # client.stream() returns an async context manager, not an awaitable.
-    # We must manually enter it to get the response object.
-    stream_context = client.stream("GET", url)
-    response = await stream_context.__aenter__()
-    response.raise_for_status()
+    _ = uuid.UUID(image_id)
 
-    async def stream_body_and_close_resources():
-      try:
-        async for chunk in response.aiter_bytes():
-          yield chunk
-      finally:
-        # Manually exit the context manager to close the response and stream.
-        await stream_context.__aexit__(None, None, None)
-        await client.aclose()
+  except ValueError:
+    raise HTTPException(
+      status_code=status.HTTP_400_BAD_REQUEST,
+      detail=f"Invalid image_id: {image_id}",
+    )
+
+  image_service = ImageService(session=session)
+
+  image = await image_service.get_image_by_id(image_id=image_id)
+  if not image:
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+  url = image.storage_key
+
+  try:
+
+    async def stream_body():
+      async with httpx.AsyncClient() as client:
+        async with client.stream("GET", url) as response:
+          response.raise_for_status()
+
+          async for chunk in response.aiter_bytes():
+            yield chunk
 
     return StreamingResponse(
-      stream_body_and_close_resources(),
-      media_type=response.headers.get("content-type", "image/jpeg"),
-      headers={"Access-Control-Allow-Origin": "*"},
+      stream_body(),
+      media_type="image/jpeg",
+      headers={
+        "Access-Control-Allow-Origin": "*",
+        "Cross-Origin-Resource-Policy": "cross-origin",
+      },
     )
+
   except httpx.HTTPStatusError as e:
-    await client.aclose()
+    logger.warning("Upstream image error: %s", e)
+
     raise HTTPException(
       status_code=e.response.status_code,
       detail="Upstream image not found or failed.",
     )
-  except httpx.RequestError:
-    await client.aclose()
+
+  except httpx.RequestError as e:
+    logger.error("Request to upstream failed: %s", e)
+
     raise HTTPException(
       status_code=502,
       detail="Could not connect to the upstream server.",
     )
-  except Exception:
-    await client.aclose()
-    raise
+
+  except Exception as e:
+    logger.exception(
+      "Unexpected error while fetching image %s: %s",
+      image_id,
+      e,
+    )
+
+    raise HTTPException(
+      status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+      detail="Internal server error",
+    )

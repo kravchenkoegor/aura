@@ -1,15 +1,14 @@
-from datetime import datetime, date
-from uuid import UUID
 import asyncio
 import json
 import logging
 import os
 import time
-from datetime import timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
+from uuid import UUID
 
 from dotenv import load_dotenv
-from redis.asyncio import Redis, from_url  # <<< Добавил Redis для type hinting
+from redis.asyncio import Redis, from_url
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.db import async_engine
@@ -43,24 +42,18 @@ REDIS_STREAM = os.getenv("REDIS_STREAM", "tasks:instagram_download:stream")
 CONSUMER_GROUP = os.getenv("REDIS_CONSUMER_GROUP", "instagram_download_group")
 CONSUMER_NAME = os.getenv("REDIS_CONSUMER_NAME", "worker-1")
 BATCH_SIZE = int(os.getenv("REDIS_BATCH_SIZE", "5"))
-IDLE_TIMEOUT_MS = int(os.getenv("REDIS_BLOCK_MS", "10000"))  # 10 сек
-
-# <<< НОВЫЙ КОД: КАСТОМНЫЙ КОДИРОВЩИК JSON >>>
+IDLE_TIMEOUT_MS = int(os.getenv("REDIS_BLOCK_MS", "10000"))
 
 
 class CustomJSONEncoder(json.JSONEncoder):
   def default(self, o):
     if isinstance(o, UUID):
-      # Если объект - это UUID, конвертируем его в строку
       return str(o)
+
     if isinstance(o, (datetime, date)):
-      # Если объект - дата/время, конвертируем в стандарт ISO
       return o.isoformat()
-    # Для всех остальных типов используем стандартный кодировщик
+
     return json.JSONEncoder.default(self, o)
-
-
-# <<< НОВАЯ ФУНКЦИЯ-ПОМОЩНИК >>>
 
 
 async def _publish_task_update(
@@ -71,9 +64,9 @@ async def _publish_task_update(
   """
   Публикует обновление статуса задачи в её персональный Redis Stream.
   """
+
   stream_name = f"task:{task_id}:updates"
 
-  # Redis Streams хранят поля как строки, поэтому сериализуем сложные типы в JSON
   final_payload = {}
   for key, value in payload.items():
     if isinstance(value, (dict, list)):
@@ -86,11 +79,11 @@ async def _publish_task_update(
     logger.info(
       f"Published update to {stream_name}: {final_payload.get('status', 'no_status')}"
     )
+
   except Exception as e:
     logger.error(f"Failed to publish update to {stream_name}: {e}")
 
 
-# <<< ИЗМЕНЕНИЕ: Добавили redis_client в параметры >>>
 async def handle_message(
   session: AsyncSession,
   redis_client: Redis,
@@ -105,7 +98,6 @@ async def handle_message(
   task_id = str(task_id)
   url = str(url)
 
-  # <<< ОТПРАВКА СТАТУСА: НАЧАЛО ОБРАБОТКИ >>>
   await _publish_task_update(
     redis_client,
     task_id,
@@ -126,10 +118,10 @@ async def handle_message(
       session=session,
       post_id=post_id,
     )
+
     if existing_image:
       logger.info(f"Post {post_id} already downloaded. Skipping.")
 
-      # <<< ОТПРАВКА СТАТУСА: ПРОПУЩЕНО >>>
       await _publish_task_update(
         redis_client,
         task_id,
@@ -160,8 +152,6 @@ async def handle_message(
     if not author_id:
       author_id = await create_author(session=session, username=username)
 
-    # Убрал print(author_id) для чистоты логов
-
     await update_post(
       session=session,
       post_id=post_data["id"],
@@ -176,14 +166,12 @@ async def handle_message(
     await session.flush()
     images_dicts = [image.model_dump(mode="json") for image in images]
 
-    # <<< ОТПРАВКА СТАТУСА: УСПЕШНО >>>
-    # Отправляем результат в виде JSON-строки
     await _publish_task_update(
       redis_client,
       task_id,
       {
         "status": TaskStatus.done.value,
-        "result": images_dicts,  # Наша функция-помощник сама преобразует это в JSON
+        "result": images_dicts,
       },
     )
 
@@ -203,9 +191,13 @@ async def handle_message(
   except Exception as e:
     logger.exception(f"Error processing task {task_id}: {e}")
 
-    # <<< ОТПРАВКА СТАТУСА: ОШИБКА >>>
     await _publish_task_update(
-      redis_client, task_id, {"status": TaskStatus.failed.value, "error": str(e)}
+      redis_client,
+      task_id,
+      {
+        "status": TaskStatus.failed.value,
+        "error": str(e),
+      },
     )
 
     await update_task(
@@ -222,24 +214,20 @@ async def handle_message(
     await session.commit()
 
 
-# <<< ИЗМЕНЕНИЕ: Принимаем redis_client как аргумент >>>
-
-
 async def _process_entry(redis_client: Redis, entry_id: str, data: dict):
   """Обработка одной записи из Stream."""
+
   try:
     # Этот код для парсинга JSON можно упростить, если вы всегда знаете,
     # что полезная нагрузка лежит в одном поле, например, 'data'.
     # Для универсальности оставим как есть.
     payload = {
-      k: json.loads(v) if isinstance(v, str) and v.startswith(("{", "[")) else v
+      k: json.loads(v) if isinstance(
+        v, str) and v.startswith(("{", "[")) else v
       for k, v in data.items()
     }
 
-    # Убрал print(payload) для чистоты логов
-
     async with AsyncSession(async_engine) as session:
-      # <<< ИЗМЕНЕНИЕ: Пробрасываем redis_client дальше >>>
       await handle_message(session, redis_client, payload)
 
     await redis_client.xack(REDIS_STREAM, CONSUMER_GROUP, entry_id)
@@ -249,7 +237,6 @@ async def _process_entry(redis_client: Redis, entry_id: str, data: dict):
     logger.exception(f"Failed to process entry {entry_id}")
 
 
-# --- Главный воркер ---
 async def start_worker(concurrency: int = 3):
   redis_url = os.getenv("REDIS_URL")
   if not redis_url:
@@ -270,16 +257,15 @@ async def start_worker(concurrency: int = 3):
   except Exception as e:
     if "BUSYGROUP" in str(e):
       logger.info(f"Consumer group {CONSUMER_GROUP} already exists.")
+
     else:
       raise
 
   sem = asyncio.Semaphore(concurrency)
   logger.info(f"Worker started: concurrency={concurrency}")
 
-  # <<< ИЗМЕНЕНИЕ: Передаем redis_client в обработчик через замыкание >>>
   async def handle_entry(entry_id, data):
     async with sem:
-      # Передаем redis_client в _process_entry
       await _process_entry(redis_client, entry_id, data)
 
   while True:
@@ -298,12 +284,8 @@ async def start_worker(concurrency: int = 3):
       tasks = []
       for _, msgs in entries:
         for entry_id, data in msgs:
-          # Сохраняем таски, чтобы можно было дождаться их завершения при выходе
           task = asyncio.create_task(handle_entry(entry_id, data))
           tasks.append(task)
-
-      # Опционально: можно дождаться завершения пачки задач
-      # await asyncio.gather(*tasks)
 
     except asyncio.CancelledError:
       logger.info("Worker cancelled.")
@@ -314,7 +296,6 @@ async def start_worker(concurrency: int = 3):
       await asyncio.sleep(2)
 
 
-# ... остальная часть кода без изменений ...
 if __name__ == "__main__":
   try:
     concurrency = int(os.getenv("WORKER_CONCURRENCY", "3"))

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import (
+  TIMESTAMP,
   Column,
   Interval,
 )
@@ -13,10 +14,10 @@ from sqlmodel import (
   Field,
   Relationship,
   SQLModel,
+  func,
 )
 
 from app.schemas.task import TaskStatus, TaskType
-from app.utils.utc_now import utc_now
 
 if TYPE_CHECKING:
   from .image import Image
@@ -26,7 +27,11 @@ if TYPE_CHECKING:
 class Task(SQLModel, table=True):
   __tablename__ = "tasks"  # type: ignore
 
-  id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
+  id: uuid.UUID = Field(
+    default_factory=uuid.uuid4,
+    primary_key=True,
+    index=True,
+  )
   type: TaskType
   status: TaskStatus = Field(
     sa_column=Column(
@@ -49,5 +54,11 @@ class Task(SQLModel, table=True):
   image_id: Optional[uuid.UUID] = Field(default=None, foreign_key="images.id")
   image: Optional["Image"] = Relationship(back_populates="tasks")
 
-  created_at: datetime = Field(default_factory=utc_now)
+  created_at: datetime = Field(
+    sa_column=Column(
+      TIMESTAMP(timezone=True),
+      server_default=func.now(),
+      nullable=False,
+    ),
+  )
   updated_at: Optional[datetime] = None

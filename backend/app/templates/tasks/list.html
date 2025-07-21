@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Список задач</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+
+    .table-responsive {
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+  </style>
+
+</head>
+
+<body>
+
+  <div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="h2">Список задач</h1>
+      <a href="/tasks/create" class="btn btn-primary">Создать задачу</a>
+    </div>
+
+    <div class="table-responsive shadow-sm">
+      <table class="table table-hover mb-0">
+        <thead class="table-secondary">
+          <tr>
+            <th scope="col">Task ID</th>
+            <th scope="col">Type</th>
+            <th scope="col">Post ID</th>
+            <th scope="col">Status</th>
+            <th scope="col">Created at</th>
+            <th scope="col">Updated at</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for task in tasks %}
+          <tr>
+            <td>
+              <code title="{{ task.id }}">
+                {{ (task.id | string)[:8] }}...
+              </code>
+            </td>
+
+            <td>
+              {{ task.type.value }}
+            </td>
+
+            <td>
+              <a href="http://localhost:5173/posts/{{ task.post_id }}" target="_blank">
+                {{ task.post_id }}
+              </a>
+            </td>
+
+            <td>
+              {% if task.status.value == 'done' %}
+              <span class="badge bg-success">
+                Done
+              </span>
+
+              {% elif task.status.value == 'pending' %}
+              <span class="badge bg-primary">
+                Pending
+              </span>
+
+              {% elif task.status.value == 'failed' %}
+              <span class="badge bg-danger">
+                Failed
+              </span>
+
+              {% else %}
+              <span class="badge bg-light text-dark">
+                {{ task.status.value }}
+              </span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if task.created_at %}
+              {{ task.created_at.strftime('%Y-%m-%d %H:%M') }}
+              {% else %}
+              -
+              {% endif %}
+            </td>
+
+            <td>
+              {% if task.updated_at %}
+              {{ task.updated_at.strftime('%Y-%m-%d %H:%M') }}
+              {% else %}
+              -
+              {% endif %}
+            </td>
+          </tr>
+
+          {% else %}
+
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">
+              Задач пока не найдено.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if tasks or skip > 0 %}
+    <nav aria-label="Пагинация по задачам" class="d-flex justify-content-center mt-4">
+      <ul class="pagination">
+        <li class="page-item {% if skip == 0 %}disabled{% endif %}">
+          <a class="page-link" href="?skip={{ [0, skip - limit] | max }}&limit={{ limit }}" aria-label="Назад">
+            <span aria-hidden="true">«</span> Назад
+          </a>
+        </li>
+
+        <li class="page-item {% if tasks|length < limit %}disabled{% endif %}">
+          <a class="page-link" href="?skip={{ skip + limit }}&limit={{ limit }}" aria-label="Далее">
+            Далее <span aria-hidden="true">»</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+</body>
+
+</html>
