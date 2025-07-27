@@ -13,7 +13,7 @@ from app.schemas import UserCreate
 
 async_engine = create_async_engine(
   str(settings.SQLALCHEMY_DATABASE_URI),
-  echo=True,
+  echo=False,
 )
 
 async_session = async_sessionmaker(

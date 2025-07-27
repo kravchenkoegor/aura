@@ -1,15 +1,13 @@
-import uuid
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Optional
+from uuid import UUID, uuid4
 
 from sqlalchemy import (
-  TIMESTAMP,
   Column,
   Interval,
+  TIMESTAMP,
 )
-from sqlalchemy import (
-  Enum as PgEnum,
-)
+from sqlalchemy import Enum as PgEnum
 from sqlmodel import (
   Field,
   Relationship,
@@ -22,13 +20,14 @@ from app.schemas.task import TaskStatus, TaskType
 if TYPE_CHECKING:
   from .image import Image
   from .post import Post
+  from .user import User
 
 
 class Task(SQLModel, table=True):
   __tablename__ = "tasks"  # type: ignore
 
-  id: uuid.UUID = Field(
-    default_factory=uuid.uuid4,
+  id: UUID = Field(
+    default_factory=uuid4,
     primary_key=True,
     index=True,
   )
@@ -51,8 +50,11 @@ class Task(SQLModel, table=True):
   post_id: Optional[str] = Field(default=None, foreign_key="posts.id")
   post: Optional["Post"] = Relationship(back_populates="tasks")
 
-  image_id: Optional[uuid.UUID] = Field(default=None, foreign_key="images.id")
+  image_id: Optional[UUID] = Field(default=None, foreign_key="images.id")
   image: Optional["Image"] = Relationship(back_populates="tasks")
+
+  user_id: Optional[UUID] = Field(default=None, foreign_key="users.id", index=True)
+  user: Optional["User"] = Relationship(back_populates="tasks")
 
   created_at: datetime = Field(
     sa_column=Column(

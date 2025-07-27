@@ -10,13 +10,13 @@ from fastapi import (
 )
 from pydantic import BaseModel
 
-from app.api.deps import AsyncSessionDep, TaskServiceDep
+from app.api.deps import CurrentUser, PostServiceDep, TaskServiceDep
 from app.schemas import (
+  InstagramUrlRequest,
   PostPublic,
   TaskCreate,
   TaskType,
 )
-from app.service.post_service import PostService
 from app.utils.instagram import extract_shortcode_from_url
 
 STREAM_NAME = os.getenv("REDIS_STREAM", "tasks:instagram_download:stream")
@@ -34,9 +34,10 @@ class PostImportRequest(BaseModel):
 async def create_post(
   *,
   request: Request,
-  session: AsyncSessionDep,
+  current_user: CurrentUser,
+  post_service: PostServiceDep,
   task_service: TaskServiceDep,
-  obj_in: PostImportRequest,
+  obj_in: InstagramUrlRequest,
 ) -> Any:
   """
   Import an Instagram post from a URL.
@@ -44,8 +45,6 @@ async def create_post(
   This will fetch the post metadata from Instagram,
   create the author, post, and image records in the database.
   """
-
-  post_service = PostService(session=session)
 
   try:
     task_id = uuid.uuid4()
@@ -65,6 +64,7 @@ async def create_post(
         id=task_id,
         type=TaskType.instagram_download,
         post_id=post_id,
+        user_id=current_user.id,
       )
     )
 
@@ -91,9 +91,7 @@ async def create_post(
 @router.get("/{post_id}", response_model=Optional[PostPublic])
 async def get_post_by_id(
   *,
-  session: AsyncSessionDep,
+  post_service: PostServiceDep,
   post_id: str,
-) -> Any:
-  post_service = PostService(session=session)
-
+) -> Optional[PostPublic]:
   return await post_service.get_post_by_id(post_id)

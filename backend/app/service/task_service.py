@@ -1,4 +1,5 @@
 from typing import Optional, Sequence
+from uuid import UUID
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -60,11 +61,17 @@ class TaskService:
     if updated_task:
       return TaskPublic.model_validate(updated_task, from_attributes=True)
 
-  async def get_all_tasks(self, skip: int, limit: int) -> Sequence[TaskPublic]:
+  async def get_all_tasks(
+    self,
+    skip: int,
+    limit: int,
+    user_id: Optional[UUID] = None,
+  ) -> Sequence[TaskPublic]:
     tasks = await task_repo.get_all_tasks(
       session=self.session,
       skip=skip,
       limit=limit,
+      user_id=user_id,
     )
 
     return [TaskPublic.model_validate(task, from_attributes=True) for task in tasks]

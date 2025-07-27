@@ -1,30 +1,20 @@
 from typing import List
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 
-from app.api.deps import AsyncSessionDep
-from app.schemas import ComplimentOutput
-from app.service.gemini_service import GeminiService
-from app.service.image_service import ImageService
+from app.api.deps import GeminiServiceDep, ImageServiceDep
+from app.schemas import ComplimentOutput, ComplimentRequest
 
 router = APIRouter(prefix="/compliments", tags=["compliments"])
-
-
-class ComplimentRequest(BaseModel):
-  post_id: str
-  style: str
 
 
 @router.post("/", response_model=List[ComplimentOutput])
 async def create_compliment(
   *,
-  session: AsyncSessionDep,
+  gemini_service: GeminiServiceDep,
+  image_service: ImageServiceDep,
   obj_in: ComplimentRequest,
 ) -> List[ComplimentOutput]:
-  gemini_service = GeminiService(session=session)
-  image_service = ImageService(session=session)
-
   post_id = obj_in.post_id
 
   try:

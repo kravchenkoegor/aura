@@ -9,8 +9,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 
-from app.api.deps import AsyncSessionDep
-from app.service.image_service import ImageService
+from app.api.deps import ImageServiceDep
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ router = APIRouter(prefix="/images", tags=["images"])
 @router.get("/{image_id}/view")
 async def view_image_by_id(
   *,
-  session: AsyncSessionDep,
+  image_service: ImageServiceDep,
   image_id: str,
 ):
   try:
@@ -32,8 +31,6 @@ async def view_image_by_id(
       status_code=status.HTTP_400_BAD_REQUEST,
       detail=f"Invalid image_id: {image_id}",
     )
-
-  image_service = ImageService(session=session)
 
   image = await image_service.get_image_by_id(image_id=image_id)
   if not image:

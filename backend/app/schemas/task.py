@@ -1,7 +1,7 @@
-import uuid
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Optional
+from uuid import UUID
 
 from sqlmodel import SQLModel
 
@@ -20,19 +20,20 @@ class TaskStatus(str, Enum):
 
 
 class TaskBase(SQLModel):
-  id: uuid.UUID
+  id: UUID
   type: TaskType
   post_id: str
-  image_id: Optional[uuid.UUID] = None
+  image_id: Optional[UUID] = None
 
 
 class TaskCreate(TaskBase):
-  pass
+  user_id: UUID
 
 
 class TaskPublic(TaskBase):
-  id: uuid.UUID
+  id: UUID
   status: TaskStatus
+  user_id: UUID
   created_at: Optional[datetime]
   updated_at: Optional[datetime]
 

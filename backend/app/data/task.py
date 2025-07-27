@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Sequence
+from uuid import UUID
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -14,6 +15,7 @@ async def create_task(session: AsyncSession, task_create: TaskCreate) -> Task:
     type=task_create.type,
     post_id=task_create.post_id,
     image_id=task_create.image_id,
+    user_id=task_create.user_id,
     status=TaskStatus.pending,
     created_at=datetime.now(timezone.utc),
   )
@@ -78,11 +80,15 @@ async def get_all_tasks(
   skip: int,
   limit: int,
   status: Optional[str] = None,
+  user_id: Optional[UUID] = None,
 ) -> Sequence[Task]:
   query = select(Task).order_by(Task.created_at.desc())
 
   if status:
     query = query.where(Task.status == status)
+
+  if user_id:
+    query = query.where(Task.user_id == user_id)
 
   query = query.offset(skip).limit(limit)
 

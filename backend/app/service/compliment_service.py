@@ -1,14 +1,14 @@
 import uuid
 
 from fastapi.concurrency import run_in_threadpool
-from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import Compliment
 from app.schemas.compliment_output_schema import ComplimentOutput
 
 
 class ComplimentService:
-  def __init__(self, session: Session):
+  def __init__(self, session: AsyncSession):
     self.session = session
 
   async def create_compliments(

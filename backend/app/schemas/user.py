@@ -1,4 +1,4 @@
-import uuid
+from uuid import UUID
 
 from pydantic import EmailStr
 from sqlmodel import Field, SQLModel
@@ -33,7 +33,7 @@ class UserUpdateMe(SQLModel):
 
 
 class UserPublic(UserBase):
-  id: uuid.UUID
+  id: UUID
 
 
 class UsersPublic(SQLModel):

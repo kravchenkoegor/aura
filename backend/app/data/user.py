@@ -5,7 +5,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import get_password_hash, verify_password
 from app.models import User
-from app.schemas import UserCreate, UserUpdate
+from app.schemas import UserPublic, UserCreate, UserUpdate
 
 
 async def create_user(
@@ -67,7 +67,7 @@ async def authenticate(
   session: AsyncSession,
   email: str,
   password: str,
-) -> Optional[User]:
+) -> Optional[UserPublic]:
   db_user = await get_user_by_email(session=session, email=email)
 
   if not db_user:
@@ -76,4 +76,4 @@ async def authenticate(
   if not verify_password(password, db_user.hashed_password):
     return None
 
-  return db_user
+  return UserPublic.model_validate(db_user)
