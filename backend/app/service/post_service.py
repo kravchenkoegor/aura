@@ -1,4 +1,5 @@
 from typing import Optional
+from uuid import UUID
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -13,16 +14,26 @@ class PostService:
   ):
     self.session = session
 
-  async def create_post(self, post_id: str) -> None:
+  async def create_post(
+    self,
+    post_id: str,
+    user_id: UUID,
+  ) -> None:
     _ = await create_post(
       session=self.session,
       post_id=post_id,
+      user_id=user_id,
     )
 
-  async def get_post_by_id(self, post_id: str) -> Optional[PostPublic]:
+  async def get_post_by_id(
+    self,
+    post_id: str,
+    user_id: UUID,
+  ) -> Optional[PostPublic]:
     post = await get_post_by_id(
       session=self.session,
       post_id=post_id,
+      user_id=user_id,
     )
 
     if post:
@@ -31,11 +42,13 @@ class PostService:
   async def update_post(
     self,
     post_id: str,
+    user_id: UUID,
     post_update: PostUpdate,
   ) -> Optional[PostPublic]:
     post = await update_post(
       session=self.session,
       post_id=post_id,
+      user_id=user_id,
       post_update=post_update,
     )
 

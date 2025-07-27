@@ -1,7 +1,14 @@
 from typing import Annotated, AsyncGenerator
 
 import jwt
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import (
+  Depends,
+  HTTPException,
+  Request,
+  WebSocket,
+  WebSocketDisconnect,
+  status,
+)
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
@@ -30,6 +37,48 @@ async def get_db_async() -> AsyncGenerator[AsyncSession, None]:
 
 AsyncSessionDep = Annotated[AsyncSession, Depends(get_db_async)]
 TokenDep = Annotated[str, Depends(reusable_oauth2)]
+
+
+async def _get_user_from_token(token: str, session: AsyncSession) -> User:
+  """
+  Decodes a JWT token, validates it, and returns the corresponding user.
+  Raises HTTPException on failure.
+  """
+
+  if not token:
+    raise HTTPException(
+      status_code=status.HTTP_401_UNAUTHORIZED,
+      detail="Not authenticated",
+    )
+
+  try:
+    payload = jwt.decode(
+      token,
+      settings.SECRET_KEY,
+      algorithms=[security.ALGORITHM],
+    )
+    token_data = TokenPayload(**payload)
+
+  except (InvalidTokenError, ValidationError):
+    raise HTTPException(
+      status_code=status.HTTP_403_FORBIDDEN,
+      detail="Could not validate credentials",
+    )
+
+  user = await session.get(User, token_data.sub)
+  if not user:
+    raise HTTPException(
+      status_code=status.HTTP_403_FORBIDDEN,
+      detail="Could not validate credentials",
+    )
+
+  if not user.is_active:
+    raise HTTPException(
+      status_code=status.HTTP_400_BAD_REQUEST,
+      detail="Inactive user",
+    )
+
+  return user
 
 
 async def get_current_user(
@@ -72,6 +121,46 @@ async def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+async def get_current_user_ws(
+  websocket: WebSocket,
+  session: AsyncSessionDep,
+  token: str | None = None,
+) -> User:
+  """
+  Dependency for WebSocket authentication.
+  Gets token from query params and validates the user.
+  """
+  if not token:
+    token = websocket.query_params.get("token")
+
+  if not token:
+    await websocket.close(
+      code=status.WS_1008_POLICY_VIOLATION,
+      reason="Missing token",
+    )
+    raise WebSocketDisconnect("Missing token")
+
+  try:
+    user = await _get_user_from_token(token=token, session=session)
+    return user
+
+  except HTTPException as e:
+    reason = e.detail
+    code = status.WS_1008_POLICY_VIOLATION
+
+    if e.status_code == status.HTTP_403_FORBIDDEN:
+      reason = "Token is invalid"
+
+    elif e.status_code == status.HTTP_400_BAD_REQUEST:
+      reason = "Inactive user"
+
+    await websocket.close(code=code, reason=reason)
+    raise WebSocketDisconnect(reason) from e
+
+
+CurrentUserWS = Annotated[User, Depends(get_current_user_ws)]
 
 
 def get_current_active_superuser(current_user: CurrentUser) -> User:

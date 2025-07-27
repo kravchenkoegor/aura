@@ -24,10 +24,15 @@ class TaskService:
 
     return TaskPublic.model_validate(task, from_attributes=True)
 
-  async def get_task_by_id(self, task_id: str) -> Optional[TaskPublic]:
+  async def get_task_by_id(
+    self,
+    task_id: str,
+    user_id: UUID,
+  ) -> Optional[TaskPublic]:
     task = await task_repo.get_task_by_id(
       session=self.session,
       task_id=task_id,
+      user_id=user_id,
     )
 
     if task:
@@ -36,11 +41,13 @@ class TaskService:
   async def update_task(
     self,
     task_id: str,
+    user_id: UUID,
     task_update: TaskUpdate,
   ) -> Optional[TaskPublic]:
     updated_task = await task_repo.update_task(
       session=self.session,
       task_id=task_id,
+      user_id=user_id,
       task_update=task_update,
     )
 
@@ -50,11 +57,13 @@ class TaskService:
   async def set_status(
     self,
     task_id: str,
+    user_id: UUID,
     status: TaskStatus,
   ) -> Optional[TaskPublic]:
     updated_task = await task_repo.set_task_status(
       session=self.session,
       task_id=task_id,
+      user_id=user_id,
       status=status,
     )
 

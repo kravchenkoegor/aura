@@ -8,7 +8,7 @@ from fastapi import (
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from app.api.deps import PostServiceDep
+from app.api.deps import CurrentUser, PostServiceDep
 from app.core.rate_limit import rate_limit_default
 from app.schemas import PostPublic
 
@@ -24,10 +24,14 @@ router = APIRouter(prefix="/posts", tags=["posts"])
 async def get_post_by_id(
   request: Request,
   *,
+  current_user: CurrentUser,
   post_service: PostServiceDep,
   post_id: str,
 ) -> JSONResponse:
-  post_data = await post_service.get_post_by_id(post_id)
+  post_data = await post_service.get_post_by_id(
+    post_id=post_id,
+    user_id=current_user.id,
+  )
   post = post_data.model_dump() if post_data else None
 
   return JSONResponse(content=jsonable_encoder(post))

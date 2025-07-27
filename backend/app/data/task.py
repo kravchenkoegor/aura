@@ -27,8 +27,14 @@ async def create_task(session: AsyncSession, task_create: TaskCreate) -> Task:
   return task
 
 
-async def get_task_by_id(session: AsyncSession, task_id: str) -> Optional[Task]:
-  result = await session.exec(select(Task).where(Task.id == task_id))
+async def get_task_by_id(
+  session: AsyncSession,
+  task_id: str,
+  user_id: UUID,
+) -> Optional[Task]:
+  result = await session.exec(
+    select(Task).where(Task.id == task_id, Task.user_id == user_id)
+  )
 
   return result.first()
 
@@ -36,9 +42,14 @@ async def get_task_by_id(session: AsyncSession, task_id: str) -> Optional[Task]:
 async def update_task(
   session: AsyncSession,
   task_id: str,
+  user_id: UUID,
   task_update: TaskUpdate,
 ) -> Optional[Task]:
-  task = await get_task_by_id(session, task_id)
+  task = await get_task_by_id(
+    session=session,
+    task_id=task_id,
+    user_id=user_id,
+  )
   if not task:
     return None
 
@@ -58,9 +69,14 @@ async def set_task_status(
   session: AsyncSession,
   task_id: str,
   status: TaskStatus,
+  user_id: UUID,
   duration: Optional[timedelta] = None,
 ) -> Optional[Task]:
-  task = await get_task_by_id(session, task_id)
+  task = await get_task_by_id(
+    session=session,
+    task_id=task_id,
+    user_id=user_id,
+  )
   if not task:
     return None
 

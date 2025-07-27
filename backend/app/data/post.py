@@ -1,4 +1,5 @@
 from typing import Optional
+from uuid import UUID
 
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
@@ -12,9 +13,14 @@ T = Post
 Statement = Select[T] | SelectOfScalar[T]
 
 
-async def create_post(session: AsyncSession, post_id: str) -> Post:
+async def create_post(
+  session: AsyncSession,
+  post_id: str,
+  user_id: UUID,
+) -> Post:
   post = Post(
     id=post_id,
+    user_id=user_id,
     author_id=None,
     description=None,
     taken_at=None,
@@ -27,7 +33,11 @@ async def create_post(session: AsyncSession, post_id: str) -> Post:
   return post
 
 
-async def get_post_by_id(session: AsyncSession, post_id: str) -> Optional[Post]:
+async def get_post_by_id(
+  session: AsyncSession,
+  post_id: str,
+  user_id: UUID,
+) -> Optional[Post]:
   """
   Fetches a post by its ID, eagerly loading its images.
 
@@ -44,7 +54,9 @@ async def get_post_by_id(session: AsyncSession, post_id: str) -> Optional[Post]:
   """
 
   stmt: Statement = (
-    select(Post).where(Post.id == post_id).options(selectinload(Post.images))  # type: ignore
+    select(Post)
+    .where(Post.id == post_id, Post.user_id == user_id)
+    .options(selectinload(Post.images))  # type: ignore
   )
   result = await session.exec(stmt)
   post = result.one_or_none()
@@ -55,9 +67,14 @@ async def get_post_by_id(session: AsyncSession, post_id: str) -> Optional[Post]:
 async def update_post(
   session: AsyncSession,
   post_id: str,
+  user_id: UUID,
   post_update: PostUpdate,
 ) -> Optional[Post]:
-  post = await get_post_by_id(session, post_id)
+  post = await get_post_by_id(
+    session=session,
+    post_id=post_id,
+    user_id=user_id,
+  )
   if not post:
     return None
 

@@ -37,12 +37,12 @@ from app.utils.reset_password import (
   verify_password_reset_token,
 )
 
-router = APIRouter(tags=["login"])
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/login", response_model=Token)
+@router.post("/sign_in", response_model=Token)
 @rate_limit_auth
-async def login_access_token(
+async def sign_in(
   request: Request,
   session: AsyncSessionDep,
   form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -71,7 +71,7 @@ async def login_access_token(
 
   access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
   token_data = Token(
-    access_token=security.create_access_token(
+    token=security.create_access_token(
       user.id,
       expires_delta=access_token_expires,
     )

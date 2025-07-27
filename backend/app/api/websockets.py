@@ -1,6 +1,6 @@
 import asyncio
 import contextlib
-import json  # <<< Добавляем импорт json
+import json
 import logging
 import uuid
 from typing import Any, Dict
@@ -9,8 +9,11 @@ from fastapi import (
   APIRouter,
   WebSocket,
   WebSocketDisconnect,
+  status,
 )
 from redis.asyncio import Redis
+
+from app.api.deps import CurrentUserWS, TaskServiceDep
 
 logger = logging.getLogger(__name__)
 
@@ -50,14 +53,13 @@ async def _forward_redis_stream(
       if extra_payload:
         payload.update(extra_payload)
 
-      # Декодируем поля, которые воркер отправил как JSON-строки
       for key, value in fields.items():
         if isinstance(value, str) and (value.startswith("{") or value.startswith("[")):
           try:
             payload[key] = json.loads(value)
 
           except json.JSONDecodeError:
-            payload[key] = value  # Оставляем как есть, если не JSON
+            payload[key] = value
 
         else:
           payload[key] = value
@@ -78,6 +80,8 @@ async def _forward_redis_stream(
 async def websocket_post_status(
   websocket: WebSocket,
   task_id: str,
+  current_user: CurrentUserWS,
+  task_service: TaskServiceDep,
 ):
   """
   Отправляет обновления статуса задачи из Redis Stream клиенту.
@@ -85,12 +89,30 @@ async def websocket_post_status(
   """
 
   try:
-    _ = uuid.UUID(task_id)
+    uuid.UUID(task_id)
 
   except ValueError:
     logger.warning(
       "WebSocket connection attempt with invalid task_id format: %s", task_id
     )
+
+    await websocket.close(
+      code=status.WS_1007_INVALID_FRAME_PAYLOAD_DATA,
+      reason="Invalid task ID format",
+    )
+    return
+
+  task = await task_service.get_task_by_id(
+    task_id=task_id,
+    user_id=current_user.id,
+  )
+
+  if not task:
+    await websocket.close(
+      code=status.WS_1011_INTERNAL_ERROR,
+      reason="Task not found",
+    )
+
     return
 
   await websocket.accept()
@@ -103,7 +125,7 @@ async def websocket_post_status(
       redis=redis_client,
       stream_name=stream_name,
       websocket=websocket,
-      start_id="$",  # Начинаем только с новых сообщений
+      start_id="$",
       extra_payload={"task_id": task_id},
     )
 

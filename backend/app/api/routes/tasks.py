@@ -71,14 +71,22 @@ async def create_task_download(
         detail="Invalid Instagram URL or shortcode not found.",
       )
 
-    existing_post = await post_service.get_post_by_id(post_id=post_id)
+    user_id = current_user.id
+
+    existing_post = await post_service.get_post_by_id(
+      post_id=post_id,
+      user_id=user_id,
+    )
     if existing_post:
       raise HTTPException(
         status_code=status.HTTP_409_CONFLICT,
         detail=f"Post with id {post_id} already exists",
       )
 
-    await post_service.create_post(post_id=post_id)
+    await post_service.create_post(
+      post_id=post_id,
+      user_id=user_id,
+    )
 
     task_data = await task_service.create_task(
       task_create=TaskCreate(
