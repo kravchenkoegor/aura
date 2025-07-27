@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
+from fastapi.responses import JSONResponse
 from pydantic.networks import EmailStr
 
 from app.api.deps import get_current_active_superuser
@@ -11,9 +12,10 @@ router = APIRouter(prefix="/utils", tags=["utils"])
 @router.post(
   "/test-email/",
   dependencies=[Depends(get_current_active_superuser)],
-  status_code=201,
+  status_code=status.HTTP_201_CREATED,
+  response_model=Message,
 )
-def test_email(email_to: EmailStr) -> Message:
+def test_email(email_to: EmailStr) -> JSONResponse:
   """
   Test emails.
   """
@@ -23,7 +25,10 @@ def test_email(email_to: EmailStr) -> Message:
     subject=email_data.subject,
     html_content=email_data.html_content,
   )
-  return Message(message="Test email sent")
+
+  message_data = Message(message="Test email sent")
+
+  return JSONResponse(content=message_data.model_dump())
 
 
 @router.get("/health-check/")

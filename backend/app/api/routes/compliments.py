@@ -1,15 +1,23 @@
 from typing import List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import (
+  APIRouter,
+  HTTPException,
+  Request,
+  status,
+)
 
 from app.api.deps import GeminiServiceDep, ImageServiceDep
+from app.core.rate_limit import rate_limit_default
 from app.schemas import ComplimentOutput, ComplimentRequest
 
 router = APIRouter(prefix="/compliments", tags=["compliments"])
 
 
 @router.post("/", response_model=List[ComplimentOutput])
+@rate_limit_default
 async def create_compliment(
+  request: Request,
   *,
   gemini_service: GeminiServiceDep,
   image_service: ImageServiceDep,
@@ -38,10 +46,13 @@ async def create_compliment(
     return candidates
 
   except ValueError as e:
-    raise HTTPException(status_code=400, detail=str(e))
+    raise HTTPException(
+      status_code=status.HTTP_400_BAD_REQUEST,
+      detail=str(e),
+    )
 
   except Exception as e:
     raise HTTPException(
-      status_code=500,
+      status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
       detail=f"An unexpected error occurred: {e}",
     )

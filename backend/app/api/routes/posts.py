@@ -1,23 +1,16 @@
 import os
-import uuid
-from typing import Any, Optional
+from typing import Optional
 
 from fastapi import (
   APIRouter,
-  HTTPException,
   Request,
-  status,
 )
-from pydantic import BaseModel
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 
-from app.api.deps import CurrentUser, PostServiceDep, TaskServiceDep
-from app.schemas import (
-  InstagramUrlRequest,
-  PostPublic,
-  TaskCreate,
-  TaskType,
-)
-from app.utils.instagram import extract_shortcode_from_url
+from app.api.deps import PostServiceDep
+from app.core.rate_limit import rate_limit_default
+from app.schemas import PostPublic
 
 STREAM_NAME = os.getenv("REDIS_STREAM", "tasks:instagram_download:stream")
 
@@ -26,72 +19,15 @@ REDIS_CHANNEL_OUTPUT = "tasks:instagram_download:output"
 router = APIRouter(prefix="/posts", tags=["posts"])
 
 
-class PostImportRequest(BaseModel):
-  url: str
-
-
-@router.post("/", status_code=status.HTTP_200_OK)
-async def create_post(
-  *,
-  request: Request,
-  current_user: CurrentUser,
-  post_service: PostServiceDep,
-  task_service: TaskServiceDep,
-  obj_in: InstagramUrlRequest,
-) -> Any:
-  """
-  Import an Instagram post from a URL.
-
-  This will fetch the post metadata from Instagram,
-  create the author, post, and image records in the database.
-  """
-
-  try:
-    task_id = uuid.uuid4()
-    post_id = extract_shortcode_from_url(obj_in.url)
-
-    if not post_id:
-      raise HTTPException(status_code=404)
-
-    existing_post = await post_service.get_post_by_id(post_id)
-    if existing_post:
-      return existing_post
-
-    await post_service.create_post(post_id=post_id)
-
-    await task_service.create_task(
-      task_create=TaskCreate(
-        id=task_id,
-        type=TaskType.instagram_download,
-        post_id=post_id,
-        user_id=current_user.id,
-      )
-    )
-
-    redis_client = request.app.state.redis_client
-    await redis_client.xadd(
-      STREAM_NAME,
-      {
-        "task_id": str(task_id),
-        "url": obj_in.url,
-      },
-    )
-
-    return {
-      "task_id": task_id,
-    }
-
-  except ValueError as e:
-    raise HTTPException(status_code=400, detail=str(e))
-
-  except Exception as e:
-    raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
-
-
 @router.get("/{post_id}", response_model=Optional[PostPublic])
+@rate_limit_default
 async def get_post_by_id(
+  request: Request,
   *,
   post_service: PostServiceDep,
   post_id: str,
-) -> Optional[PostPublic]:
-  return await post_service.get_post_by_id(post_id)
+) -> JSONResponse:
+  post_data = await post_service.get_post_by_id(post_id)
+  post = post_data.model_dump() if post_data else None
+
+  return JSONResponse(content=jsonable_encoder(post))

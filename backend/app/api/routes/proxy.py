@@ -5,11 +5,13 @@ import httpx
 from fastapi import (
   APIRouter,
   HTTPException,
+  Request,
   status,
 )
 from fastapi.responses import StreamingResponse
 
 from app.api.deps import ImageServiceDep
+from app.core.rate_limit import rate_limit_default
 
 logger = logging.getLogger(__name__)
 
@@ -18,13 +20,15 @@ router = APIRouter(prefix="/images", tags=["images"])
 
 
 @router.get("/{image_id}/view")
+@rate_limit_default
 async def view_image_by_id(
+  request: Request,
   *,
   image_service: ImageServiceDep,
   image_id: str,
 ):
   try:
-    _ = uuid.UUID(image_id)
+    uuid.UUID(image_id)
 
   except ValueError:
     raise HTTPException(
@@ -69,7 +73,7 @@ async def view_image_by_id(
     logger.error("Request to upstream failed: %s", e)
 
     raise HTTPException(
-      status_code=502,
+      status_code=status.HTTP_502_BAD_GATEWAY,
       detail="Could not connect to the upstream server.",
     )
 

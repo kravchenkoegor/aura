@@ -1,7 +1,7 @@
 from typing import Annotated, AsyncGenerator
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
@@ -11,7 +11,7 @@ from app.core import security
 from app.core.config import settings
 from app.core.db import async_session
 from app.models import User
-from app.schemas import TokenPayload, UserPublic
+from app.schemas import TokenPayload
 from app.service import (
   ComplimentService,
   GeminiService,
@@ -35,7 +35,8 @@ TokenDep = Annotated[str, Depends(reusable_oauth2)]
 async def get_current_user(
   session: AsyncSessionDep,
   token: TokenDep,
-) -> UserPublic:
+  request: Request,
+) -> User:
   try:
     payload = jwt.decode(
       token,
@@ -44,21 +45,30 @@ async def get_current_user(
     )
     token_data = TokenPayload(**payload)
 
-  except (InvalidTokenError, ValidationError):
+  except (InvalidTokenError, ValidationError) as e:
+    print(str(e))
     raise HTTPException(
-      status_code=status.HTTP_403_FORBIDDEN,
-      detail="Could not validate credentials",
+      status_code=status.HTTP_400_BAD_REQUEST,
+      detail="Incorrect email or password",
     )
 
   user = await session.get(User, token_data.sub)
 
   if not user:
-    raise HTTPException(status_code=404, detail="User not found")
+    raise HTTPException(
+      status_code=status.HTTP_404_NOT_FOUND,
+      detail="Incorrect email or password",
+    )
 
   if not user.is_active:
-    raise HTTPException(status_code=400, detail="Inactive user")
+    raise HTTPException(
+      status_code=status.HTTP_403_FORBIDDEN,
+      detail="Inactive user",
+    )
 
-  return UserPublic.model_validate(user)
+  request.state.user = user
+
+  return user
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
@@ -66,9 +76,8 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 def get_current_active_superuser(current_user: CurrentUser) -> User:
   if not current_user.is_superuser:
-    raise HTTPException(
-      status_code=403, detail="The user doesn't have enough privileges"
-    )
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+
   return current_user
 
 

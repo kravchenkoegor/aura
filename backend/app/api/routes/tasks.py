@@ -10,6 +10,8 @@ from fastapi import (
   Request,
   status,
 )
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app.api.deps import (
@@ -17,6 +19,7 @@ from app.api.deps import (
   PostServiceDep,
   TaskServiceDep,
 )
+from app.core.rate_limit import rate_limit_default
 from app.schemas import (
   TaskCreate,
   TaskPublic,
@@ -43,14 +46,15 @@ logger = logging.getLogger(__name__)
   response_model=TaskPublic,
   status_code=status.HTTP_202_ACCEPTED,
 )
+@rate_limit_default
 async def create_task_download(
-  *,
   request: Request,
+  *,
   current_user: CurrentUser,
   post_service: PostServiceDep,
   task_service: TaskServiceDep,
   obj_in: CreateTaskDownload,
-) -> TaskPublic:
+) -> JSONResponse:
   """
   Create a new Instagram download task.
 
@@ -76,7 +80,7 @@ async def create_task_download(
 
     await post_service.create_post(post_id=post_id)
 
-    task = await task_service.create_task(
+    task_data = await task_service.create_task(
       task_create=TaskCreate(
         id=task_id,
         type=TaskType.instagram_download,
@@ -102,7 +106,7 @@ async def create_task_download(
       post_id,
     )
 
-    return task
+    return JSONResponse(content=jsonable_encoder(task_data.model_dump()))
 
   except ValueError as e:
     logger.error("ValueError while creating task: %s", e)
@@ -124,12 +128,14 @@ async def create_task_download(
   response_model=TaskPublic,
   status_code=status.HTTP_200_OK,
 )
+@rate_limit_default
 async def get_task_by_id(
+  request: Request,
   *,
   current_user: CurrentUser,
   task_service: TaskServiceDep,
   task_id: str,
-) -> TaskPublic:
+) -> JSONResponse:
   """
   Get a specific task by ID.
 
@@ -146,20 +152,20 @@ async def get_task_by_id(
     )
 
   try:
-    task = await task_service.get_task_by_id(task_id=task_id)
-    if not task:
+    task_data = await task_service.get_task_by_id(task_id=task_id)
+    if not task_data:
       raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail=f"Task with id {task_id} not found",
       )
 
-    if not current_user.is_superuser and task.user_id != current_user.id:
+    if not current_user.is_superuser and task_data.user_id != current_user.id:
       raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Not authorized to access this task",
       )
 
-    return task
+    return JSONResponse(content=jsonable_encoder(task_data.model_dump()))
 
   except ValueError as e:
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -180,7 +186,9 @@ async def get_task_by_id(
   response_model=List[TaskPublic],
   status_code=status.HTTP_200_OK,
 )
+@rate_limit_default
 async def list_user_tasks(
+  request: Request,
   *,
   current_user: CurrentUser,
   task_service: TaskServiceDep,
@@ -195,7 +203,7 @@ async def list_user_tasks(
     le=100,
     description="Number of tasks to return",
   ),
-) -> List[TaskPublic]:
+) -> JSONResponse:
   """
   List all tasks for the current user.
 
@@ -203,10 +211,12 @@ async def list_user_tasks(
   Regular users will only see their own tasks.
   """
 
-  tasks = await task_service.get_all_tasks(
+  tasks_data = await task_service.get_all_tasks(
     skip=skip,
     limit=limit,
     user_id=(None if current_user.is_superuser else current_user.id),
   )
 
-  return tasks
+  tasks = [task.model_dump() for task in tasks_data]
+
+  return JSONResponse(content=jsonable_encoder(tasks))
