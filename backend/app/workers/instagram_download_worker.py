@@ -218,12 +218,8 @@ async def _process_entry(redis_client: Redis, entry_id: str, data: dict):
   """Обработка одной записи из Stream."""
 
   try:
-    # Этот код для парсинга JSON можно упростить, если вы всегда знаете,
-    # что полезная нагрузка лежит в одном поле, например, 'data'.
-    # Для универсальности оставим как есть.
     payload = {
-      k: json.loads(v) if isinstance(
-        v, str) and v.startswith(("{", "[")) else v
+      k: json.loads(v) if isinstance(v, str) and v.startswith(("{", "[")) else v
       for k, v in data.items()
     }
 

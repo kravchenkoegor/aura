@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import json
 import os
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import httpx
 from dotenv import load_dotenv
@@ -9,13 +12,15 @@ from google.genai import types
 from pydantic import ValidationError
 from sqlmodel import select
 
-from app.api.deps import AsyncSessionDep
 from app.models import (
   GenerationMetadata,
   Image,
   Post,
 )
 from app.schemas import ComplimentOutput
+
+if TYPE_CHECKING:
+  from app.api.deps import AsyncSessionDep
 
 load_dotenv()
 
@@ -54,6 +59,7 @@ class GeminiService:
     if not existing_post:
       raise ValueError(f"Post with ID {post_id} not found")
 
+    # TODO: pass image
     result = await session.exec(
       select(Image).where(
         Image.post_id == post_id,
