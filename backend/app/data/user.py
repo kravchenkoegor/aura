@@ -5,20 +5,23 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import get_password_hash, verify_password
 from app.models import User
-from app.schemas import UserPublic, UserCreate, UserUpdate
+from app.schemas import UserPublic, UserRegister, UserUpdate
 
 
 async def create_user(
   *,
   session: AsyncSession,
-  user_create: UserCreate,
+  user_create: UserRegister,
 ) -> User:
-  db_obj = User.model_validate(
-    user_create,
-    update={
-      "hashed_password": get_password_hash(user_create.password),
-    },
+  user_data = user_create.model_dump(exclude={"password"})
+  hashed_password = get_password_hash(user_create.password)
+  db_user = User(
+    **user_data,
+    hashed_password=hashed_password,
+    is_active=False,
   )
+
+  db_obj = User.model_validate(db_user)
 
   session.add(db_obj)
   await session.commit()

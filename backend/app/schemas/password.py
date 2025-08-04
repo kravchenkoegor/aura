@@ -1,3 +1,4 @@
+from pydantic import EmailStr
 from sqlmodel import Field, SQLModel
 
 
@@ -9,3 +10,7 @@ class NewPassword(SQLModel):
 class UpdatePassword(SQLModel):
   current_password: str = Field(min_length=8, max_length=40)
   new_password: str = Field(min_length=8, max_length=40)
+
+
+class ForgotPassword(SQLModel):
+  email: EmailStr

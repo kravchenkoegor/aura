@@ -13,6 +13,8 @@ services:
     depends_on:
       - db
       - redis
+    networks:
+      - aura
 
   instagram_worker:
     build: .
@@ -24,6 +26,8 @@ services:
     depends_on:
       - db
       - redis
+    networks:
+      - aura
 
   db:
     image: postgres:15-alpine
@@ -35,6 +39,8 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
     ports:
       - "5432:5432"
+    networks:
+      - aura
 
   redis:
     image: redis:7-alpine
@@ -42,7 +48,22 @@ services:
       - redis_data:/data
     ports:
       - "6379:6379"
+    networks:
+      - aura
+
+  mailcrab:
+    image: marlonb/mailcrab:latest
+    container_name: mailcrab_server
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+    networks:
+      - aura
 
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  aura:
+    name: aura
