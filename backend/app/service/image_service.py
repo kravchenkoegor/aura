@@ -1,4 +1,5 @@
 from typing import Optional
+from uuid import UUID
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -31,10 +32,12 @@ class ImageService:
   async def get_primary_image_by_post_id(
     self,
     post_id: str,
+    user_id: UUID,
   ) -> Optional[ImagePublic]:
     image = await get_primary_image_by_post_id(
       session=self.session,
       post_id=post_id,
+      user_id=user_id,
     )
 
     if image:

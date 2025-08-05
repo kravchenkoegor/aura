@@ -1,80 +1,45 @@
 from __future__ import annotations
 
 import json
-import os
+import logging
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-import httpx
-from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from pydantic import ValidationError
-from sqlmodel import select
 
-from app.models import (
-  GenerationMetadata,
-  Image,
-  Post,
-)
+from app.core.config import settings
+from app.models import GenerationMetadata
 from app.schemas import ComplimentOutput
 
 if TYPE_CHECKING:
   from app.api.deps import AsyncSessionDep
 
-load_dotenv()
+logger = logging.getLogger(__name__)
 
 
 class GeminiService:
   def __init__(self, session: AsyncSessionDep):
     self.session = session
-
-    self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
     self.system_prompt = self._get_system_prompt()
-
-    self.model = "gemini-2.5-flash"
+    self.model = settings.GEMINI_MODEL
 
   def _get_system_prompt(self) -> str:
-    print(os.getcwd())
-    # file_path = os.getenv("SYSTEM_PROMPT_PATH")
-    file_path = os.path.join(
-      os.getcwd(),
-      "app/service/gemini_service/prompts/structured_json.md",
-    )
-    if not file_path:
-      raise FileNotFoundError("SYSTEM_PROMPT_PATH is not set")
+    try:
+      with open(settings.SYSTEM_PROMPT_PATH, "r", encoding="utf-8") as f:
+        return f.read()
 
-    with open(file_path, "r", encoding="utf-8") as f:
-      return f.read()
+    except FileNotFoundError:
+      logger.error(f"System prompt file not found at {settings.SYSTEM_PROMPT_PATH}")
+      raise
 
   async def create_chat(
     self,
-    session: AsyncSessionDep,
-    post_id: str,
-    style: str,
+    image_bytes: bytes,
   ) -> tuple[GenerationMetadata, list[ComplimentOutput]]:
     start_time = datetime.now()
-
-    existing_post = await session.get(Post, post_id)
-    if not existing_post:
-      raise ValueError(f"Post with ID {post_id} not found")
-
-    # TODO: pass image
-    result = await session.exec(
-      select(Image).where(
-        Image.post_id == post_id,
-        Image.is_primary,
-      ),
-    )
-    primary_image = result.first()
-
-    if not primary_image:
-      raise ValueError(f"Primary image for post {post_id} not found")
-
-    async with httpx.AsyncClient() as client:
-      http_response = await client.get(primary_image.storage_key)
-      http_response.raise_for_status()
-      image_bytes = http_response.content
 
     image_part = types.Part.from_bytes(
       data=image_bytes,
@@ -104,23 +69,25 @@ class GeminiService:
       analysis_duration_ms=int((end_time - start_time).total_seconds() * 1000),
     )
 
-    session.add(generation_metadata)
-    await session.commit()
-    await session.refresh(generation_metadata)
+    self.session.add(generation_metadata)
+    await self.session.commit()
+    await self.session.refresh(generation_metadata)
 
     candidates: list[ComplimentOutput] = []
     if response.candidates:
       for i, candidate in enumerate(response.candidates, 1):
         if candidate.content and candidate.content.parts:
           response_text = candidate.content.parts[0].text or ""
+
           try:
-            validated_output = ComplimentOutput.model_validate_json(
-              response_text,
-            )
+            validated_output = ComplimentOutput.model_validate_json(response_text)
             candidates.append(validated_output)
+
           except (json.JSONDecodeError, ValidationError) as e:
-            # Рекомендуется использовать логгер вместо print
-            print(f"Invalid response format for candidate {i}: {e}")
+            logger.warning(
+              f"Invalid response format for candidate {i}: {e}",
+              extra={"response_text": response_text},
+            )
             continue
 
     return (generation_metadata, candidates)

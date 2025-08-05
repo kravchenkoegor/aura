@@ -160,7 +160,10 @@ async def get_task_by_id(
     )
 
   try:
-    task_data = await task_service.get_task_by_id(task_id=task_id)
+    task_data = await task_service.get_task_by_id(
+      task_id=task_id,
+      user_id=current_user.id,
+    )
     if not task_data:
       raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,

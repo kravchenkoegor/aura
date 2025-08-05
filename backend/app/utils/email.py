@@ -76,8 +76,6 @@ def send_email(
   if settings.SMTP_PASSWORD:
     smtp_options["password"] = settings.SMTP_PASSWORD
 
-  print(smtp_options)
-
   try:
     response = message.send(to=email_to, smtp=smtp_options)
     logger.info(f"Send email result: {response.status_code} {response.status_text}")

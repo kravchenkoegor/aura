@@ -1,7 +1,12 @@
 import os
 import secrets
 import warnings
-from typing import Annotated, Any, Literal
+from typing import (
+  Annotated,
+  Any,
+  Literal,
+  Optional,
+)
 
 from pydantic import (
   AnyUrl,
@@ -66,6 +71,10 @@ class Settings(BaseSettings):
   RATE_LIMIT_HEADERS_ENABLED: bool = True
   RATE_LIMIT_KEY_STRATEGY: Literal["ip", "user", "ip+user"] = "ip"
   RATE_LIMIT_EXEMPT_IPS: list[str] = []
+
+  GEMINI_API_KEY: Optional[str] = None
+  GEMINI_MODEL: Optional[str] = "gemini-flash-latest"
+  SYSTEM_PROMPT_PATH: Optional[str] = None
 
   @field_validator("BACKEND_CORS_ORIGINS")
   @classmethod

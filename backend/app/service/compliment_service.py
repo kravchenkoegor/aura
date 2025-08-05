@@ -1,10 +1,9 @@
 import uuid
 
-from fastapi.concurrency import run_in_threadpool
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import Compliment
-from app.schemas.compliment_output_schema import ComplimentOutput
+from app.schemas import ComplimentOutput
 
 
 class ComplimentService:
@@ -26,28 +25,23 @@ class ComplimentService:
       list[Compliment]: A list of created Compliment objects with their IDs and other details.
     """
 
-    def _create_compliments_sync() -> list[Compliment]:
-      compliments = []
+    compliments = []
 
-      for candidate in candidates:
-        compliments.append(
-          Compliment(
-            image_id=image_id,
-            # TODO: replace with actual language ID
-            lang_id=uuid.UUID("923eebd0-4219-4574-8709-7d661cbbd0be"),
-            generation_id=generation_metadata_id,
-            text=candidate.comment.text,
-            tone_breakdown=candidate.analysis.tone_breakdown.dict(),
-          )
-        )
+    for i, candidate in enumerate(candidates, 1):
+      compliment = Compliment(
+        image_id=image_id,
+        lang_id="en",
+        generation_id=generation_metadata_id,
+        text=candidate.comment.text,
+        tone_breakdown=candidate.analysis.tone_breakdown.model_dump(),
+      )
 
-      self.session.add_all(compliments)
-      self.session.commit()
+      compliments.append(compliment)
 
-      # Refresh each created compliment to load DB-generated values like ID
-      for compliment in compliments:
-        self.session.refresh(compliment)
+    self.session.add_all(compliments)
+    await self.session.commit()
 
-      return compliments
+    for compliment in compliments:
+      await self.session.refresh(compliment)
 
-    return await run_in_threadpool(_create_compliments_sync)
+    return compliments
