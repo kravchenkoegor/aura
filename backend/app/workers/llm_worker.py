@@ -4,12 +4,15 @@ import logging
 import os
 import time
 from datetime import date, datetime, timedelta, timezone
+from json import JSONDecodeError
 from typing import Any, Dict
 from uuid import UUID
 
 import httpx
 from dotenv import load_dotenv
 from redis.asyncio import Redis, from_url
+from redis.exceptions import RedisError, ResponseError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.db import async_engine
@@ -57,17 +60,17 @@ async def _publish_task_update(
   payload: Dict[str, Any],
 ):
   stream_name = f"task:{task_id}:updates"
-  final_payload = {
+  final_payload: Dict[str, Any] = {
     k: json.dumps(v, cls=CustomJSONEncoder) if isinstance(v, (dict, list)) else str(v)
     for k, v in payload.items()
   }
   try:
-    await redis_client.xadd(stream_name, final_payload)
+    await redis_client.xadd(stream_name, final_payload)  # type: ignore
 
     status = final_payload.get("status", "no_status")
     logger.info(f"Published update to {stream_name}: {status}")
 
-  except Exception as e:
+  except RedisError as e:
     logger.error(f"Failed to publish update to {stream_name}: {e}")
 
 
@@ -148,7 +151,7 @@ async def handle_message(
     )
     await session.commit()
 
-  except Exception as e:
+  except (ValueError, httpx.RequestError, SQLAlchemyError) as e:
     logger.exception(f"Error processing task {task_id}: {e}")
 
     await _publish_task_update(
@@ -193,7 +196,7 @@ async def _process_entry(
     await redis_client.xack(REDIS_STREAM, CONSUMER_GROUP, entry_id)
     logger.info(f"ACK: {entry_id}")
 
-  except Exception:
+  except (JSONDecodeError, RedisError):
     logger.exception(f"Failed to process entry {entry_id}")
 
 
@@ -215,11 +218,11 @@ async def start_worker(concurrency: int = 3):
     )
     logger.info(f"Created consumer group {CONSUMER_GROUP}")
 
-  except Exception as e:
+  except ResponseError as e:
     if "BUSYGROUP" in str(e):
       logger.info(f"Consumer group {CONSUMER_GROUP} already exists.")
-
     else:
+      logger.error(f"Failed to create consumer group: {e}")
       raise
 
   sem = asyncio.Semaphore(concurrency)
@@ -253,8 +256,8 @@ async def start_worker(concurrency: int = 3):
       logger.info("Worker cancelled.")
       break
 
-    except Exception:
-      logger.exception("Error in worker loop")
+    except RedisError:
+      logger.exception("Redis error in worker loop")
       await asyncio.sleep(2)
 
 

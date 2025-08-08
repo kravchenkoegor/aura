@@ -1,4 +1,5 @@
 import logging
+import smtplib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -80,7 +81,7 @@ def send_email(
     response = message.send(to=email_to, smtp=smtp_options)
     logger.info(f"Send email result: {response.status_code} {response.status_text}")
 
-  except Exception as e:
+  except smtplib.SMTPException as e:
     logger.error(f"Failed to send email to {email_to}: {e}")
 
 

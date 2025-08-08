@@ -1,7 +1,7 @@
 import logging
 import os
-from typing import List
 import uuid
+from typing import List
 
 from fastapi import (
   APIRouter,
@@ -13,6 +13,8 @@ from fastapi import (
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from redis.exceptions import RedisError
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import (
   CurrentUser,
@@ -123,7 +125,7 @@ async def create_task_download(
   except HTTPException:
     raise
 
-  except Exception as e:
+  except (SQLAlchemyError, RedisError) as e:
     logger.exception("Unexpected error while creating task: %s", e)
     raise HTTPException(
       status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -184,7 +186,7 @@ async def get_task_by_id(
   except HTTPException:
     raise
 
-  except Exception as e:
+  except SQLAlchemyError as e:
     logger.exception("Unexpected error while fetching task %s: %s", task_id, e)
     raise HTTPException(
       status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

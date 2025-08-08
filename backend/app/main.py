@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from redis.asyncio import Redis, from_url
+from redis.exceptions import RedisError
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.cors import CORSMiddleware
@@ -143,7 +144,7 @@ async def lifespan(app: FastAPI):
     logger.info("✓ Application startup complete - Ready to accept requests")
     logger.info("=" * 80)
 
-  except Exception as e:
+  except (ValueError, RedisError) as e:
     logger.error("=" * 80)
     logger.error("✗ Application startup failed!")
     logger.error("Error: %s", str(e))
@@ -166,7 +167,7 @@ async def lifespan(app: FastAPI):
     logger.info("✓ Application shutdown complete")
     logger.info("=" * 80)
 
-  except Exception as e:
+  except RedisError as e:
     logger.error("Error during shutdown: %s", str(e))
 
 

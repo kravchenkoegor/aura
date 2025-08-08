@@ -12,6 +12,8 @@ from fastapi import (
   status,
 )
 from redis.asyncio import Redis
+from redis.exceptions import RedisError
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import CurrentUserWS, TaskServiceDep
 
@@ -36,7 +38,7 @@ async def _forward_redis_stream(
   while True:
     try:
       resp = await redis.xread({stream_name: last_id}, block=15_000, count=50)
-    except Exception as exc:
+    except RedisError as exc:
       logger.exception("Redis XREAD failed: %s", exc)
       await asyncio.sleep(1)
       continue
@@ -132,7 +134,7 @@ async def websocket_post_status(
   except WebSocketDisconnect:
     logger.info("Client for task %s disconnected prematurely.", task_id)
 
-  except Exception as exc:
+  except (SQLAlchemyError, asyncio.TimeoutError) as exc:
     logger.exception("WebSocket error for task %s: %s", task_id, exc)
 
   finally:

@@ -3,9 +3,9 @@ from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+  TIMESTAMP,
   Column,
   Interval,
-  TIMESTAMP,
 )
 from sqlalchemy import Enum as PgEnum
 from sqlmodel import (

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 
@@ -9,6 +10,7 @@ from fastapi import (
   status,
 )
 from fastapi.responses import StreamingResponse
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import ImageServiceDep
 from app.core.rate_limit import rate_limit_default
@@ -77,7 +79,7 @@ async def view_image_by_id(
       detail="Could not connect to the upstream server.",
     )
 
-  except Exception as e:
+  except (SQLAlchemyError, asyncio.TimeoutError) as e:
     logger.exception(
       "Unexpected error while fetching image %s: %s",
       image_id,

@@ -4,11 +4,14 @@ import logging
 import os
 import time
 from datetime import date, datetime, timedelta, timezone
+from json import JSONDecodeError
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from dotenv import load_dotenv
 from redis.asyncio import Redis, from_url
+from redis.exceptions import RedisError, ResponseError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.db import async_engine
@@ -80,7 +83,7 @@ async def _publish_task_update(
       f"Published update to {stream_name}: {final_payload.get('status', 'no_status')}"
     )
 
-  except Exception as e:
+  except RedisError as e:
     logger.error(f"Failed to publish update to {stream_name}: {e}")
 
 
@@ -194,7 +197,7 @@ async def handle_message(
     await session.commit()
     return images_dicts
 
-  except Exception as e:
+  except (ValueError, SQLAlchemyError) as e:
     logger.exception(f"Error processing task {task_id}: {e}")
 
     await _publish_task_update(
@@ -236,7 +239,7 @@ async def _process_entry(redis_client: Redis, entry_id: str, data: dict):
     await redis_client.xack(REDIS_STREAM, CONSUMER_GROUP, entry_id)
     logger.info(f"ACK: {entry_id}")
 
-  except Exception:
+  except (JSONDecodeError, RedisError):
     logger.exception(f"Failed to process entry {entry_id}")
 
 
@@ -257,7 +260,7 @@ async def start_worker(concurrency: int = 3):
     )
     logger.info(f"Created consumer group {CONSUMER_GROUP}")
 
-  except Exception as e:
+  except ResponseError as e:
     if "BUSYGROUP" in str(e):
       logger.info(f"Consumer group {CONSUMER_GROUP} already exists.")
 
@@ -294,7 +297,7 @@ async def start_worker(concurrency: int = 3):
       logger.info("Worker cancelled.")
       # Здесь можно добавить логику graceful shutdown, например, дождаться завершения текущих задач
       break
-    except Exception:
+    except RedisError:
       logger.exception("Error in worker loop")
       await asyncio.sleep(2)
 

@@ -1,13 +1,11 @@
 import os
 import uuid
-from fastapi import (
-  APIRouter,
-  HTTPException,
-  Request,
-  status,
-)
+
+from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+from redis.exceptions import RedisError
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import CurrentUser, TaskServiceDep
 from app.core.rate_limit import rate_limit_default
@@ -68,7 +66,7 @@ async def create_compliment(
 
     return JSONResponse(content=jsonable_encoder(task_data.model_dump()))
 
-  except Exception as e:
+  except (SQLAlchemyError, RedisError) as e:
     raise HTTPException(
       status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
       detail=f"An unexpected error occurred: {e}",

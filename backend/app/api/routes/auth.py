@@ -38,10 +38,10 @@ from app.utils.email import (
   send_email,
 )
 from app.utils.tokens import (
-  generate_password_reset_token,
-  verify_password_reset_token,
   generate_email_verify_token,
+  generate_password_reset_token,
   verify_email_verify_token,
+  verify_password_reset_token,
 )
 
 

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -32,7 +33,7 @@ async def init(db_engine: AsyncEngine) -> None:
     async with AsyncSession(db_engine) as session:
       # Try to create session to check if DB is awake
       await session.exec(select(1))
-  except Exception as e:
+  except (ConnectionRefusedError, SQLAlchemyError) as e:
     logger.error(e)
     raise e
 
