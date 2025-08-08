@@ -13,6 +13,8 @@ async def create_user(
   session: AsyncSession,
   user_create: UserRegister,
 ) -> User:
+  """Create a new user."""
+
   user_data = user_create.model_dump(exclude={"password"})
   hashed_password = get_password_hash(user_create.password)
   db_user = User(
@@ -36,6 +38,8 @@ async def update_user(
   db_user: User,
   user_in: UserUpdate,
 ) -> Any:
+  """Update a user."""
+
   user_data = user_in.model_dump(exclude_unset=True)
   extra_data = {}
 
@@ -58,6 +62,8 @@ async def get_user_by_email(
   session: AsyncSession,
   email: str,
 ) -> Optional[User]:
+  """Get a user by email."""
+
   stmt = select(User).where(User.email == email)
   result = await session.exec(stmt)
   session_user = result.first()
@@ -71,6 +77,8 @@ async def authenticate(
   email: str,
   password: str,
 ) -> Optional[UserPublic]:
+  """Authenticate a user."""
+
   db_user = await get_user_by_email(session=session, email=email)
 
   if not db_user:

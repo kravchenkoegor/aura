@@ -30,9 +30,10 @@ async def _forward_redis_stream(
   extra_payload: Dict[str, Any] | None = None,
 ) -> None:
   """
-  Читает Redis Stream и отправляет сообщения в WebSocket,
-  пока не получит финальный статус ('done', 'failed', 'skipped').
+  Reads a Redis Stream and sends messages to a WebSocket
+  until a final status ('done', 'failed', 'skipped') is received.
   """
+
   last_id = start_id
 
   while True:
@@ -86,8 +87,8 @@ async def websocket_post_status(
   task_service: TaskServiceDep,
 ):
   """
-  Отправляет обновления статуса задачи из Redis Stream клиенту.
-  Соединение закрывается после получения финального статуса.
+  Sends task status updates from a Redis Stream to the client.
+  The connection is closed after receiving a final status.
   """
 
   try:

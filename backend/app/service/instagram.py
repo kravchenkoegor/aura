@@ -22,6 +22,8 @@ L = instaloader.Instaloader(quiet=True, compress_json=False)
 
 
 def get_sidecar_nodes(post_data: instaloader.Post) -> list[PostSidecarNode]:
+  """Get the sidecar nodes from a post."""
+
   edges = post_data._node.get("edge_sidecar_to_children", {}).get("edges", [])
 
   if not edges:
@@ -51,6 +53,8 @@ def get_sidecar_nodes(post_data: instaloader.Post) -> list[PostSidecarNode]:
 
 
 def extract_filename_from_url(url: str) -> str:
+  """Extract the filename from a URL."""
+
   path = urlparse(url).path
   filename = path.split("/")[-1]
 

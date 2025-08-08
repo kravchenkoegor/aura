@@ -18,6 +18,8 @@ async def create_post(
   post_id: str,
   user_id: UUID,
 ) -> Post:
+  """Create a new post."""
+
   post = Post(
     id=post_id,
     user_id=user_id,
@@ -70,6 +72,8 @@ async def update_post(
   user_id: UUID,
   post_update: PostUpdate,
 ) -> Optional[Post]:
+  """Update a post."""
+
   post = await get_post_by_id(
     session=session,
     post_id=post_id,

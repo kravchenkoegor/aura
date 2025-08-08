@@ -59,6 +59,8 @@ async def _publish_task_update(
   task_id: str,
   payload: Dict[str, Any],
 ):
+  """Publish a task update to the Redis stream."""
+
   stream_name = f"task:{task_id}:updates"
   final_payload: Dict[str, Any] = {
     k: json.dumps(v, cls=CustomJSONEncoder) if isinstance(v, (dict, list)) else str(v)
@@ -79,6 +81,8 @@ async def handle_message(
   redis_client: Redis,
   message: dict,
 ):
+  """Handle a single message from the Redis stream."""
+
   task_id = message.get("task_id")
   post_id = message.get("post_id")
   user_id = message.get("user_id")
@@ -184,6 +188,8 @@ async def _process_entry(
   entry_id: str,
   data: dict,
 ):
+  """Process a single entry from the Redis stream."""
+
   try:
     payload = {
       k: json.loads(v) if isinstance(v, str) and v.startswith(("{", "[")) else v
@@ -201,6 +207,8 @@ async def _process_entry(
 
 
 async def start_worker(concurrency: int = 3):
+  """Start the worker."""
+
   redis_url = os.getenv("REDIS_URL")
 
   if not redis_url:

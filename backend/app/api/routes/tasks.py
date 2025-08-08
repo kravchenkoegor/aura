@@ -37,6 +37,8 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
 class CreateTaskDownload(BaseModel):
+  """Schema for creating a download task."""
+
   url: str
 
 

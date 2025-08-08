@@ -10,6 +10,8 @@ from app.schemas import TaskCreate, TaskStatus, TaskUpdate
 
 
 async def create_task(session: AsyncSession, task_create: TaskCreate) -> Task:
+  """Create a new task."""
+
   task = Task(
     id=task_create.id,
     type=task_create.type,
@@ -32,6 +34,8 @@ async def get_task_by_id(
   task_id: str,
   user_id: UUID,
 ) -> Optional[Task]:
+  """Get a task by its ID."""
+
   result = await session.exec(
     select(Task).where(Task.id == task_id, Task.user_id == user_id)
   )
@@ -45,6 +49,8 @@ async def update_task(
   user_id: UUID,
   task_update: TaskUpdate,
 ) -> Optional[Task]:
+  """Update a task."""
+
   task = await get_task_by_id(
     session=session,
     task_id=task_id,
@@ -72,6 +78,8 @@ async def set_task_status(
   user_id: UUID,
   duration: Optional[timedelta] = None,
 ) -> Optional[Task]:
+  """Set the status of a task."""
+
   task = await get_task_by_id(
     session=session,
     task_id=task_id,
@@ -98,7 +106,9 @@ async def get_all_tasks(
   status: Optional[str] = None,
   user_id: Optional[UUID] = None,
 ) -> Sequence[Task]:
-  query = select(Task).order_by(Task.created_at.desc())
+  """Get all tasks."""
+
+  query = select(Task)
 
   if status:
     query = query.where(Task.status == status)

@@ -29,16 +29,29 @@ wait_seconds = 1
   after=after_log(logger, logging.WARN),
 )
 async def init(db_engine: AsyncEngine) -> None:
+  """
+  Initialize the database connection.
+
+  Retries connection up to `max_tries` times with a `wait_seconds` delay.
+  """
+
   try:
     async with AsyncSession(db_engine) as session:
       # Try to create session to check if DB is awake
       await session.exec(select(1))
+
   except (ConnectionRefusedError, SQLAlchemyError) as e:
     logger.error(e)
     raise e
 
 
 def main() -> None:
+  """
+  Main entry point for the pre-start script.
+
+  Initializes the database and logs the process.
+  """
+
   logger.info("Initializing service")
   asyncio.run(init(async_engine))
   logger.info("Service finished initializing")

@@ -11,6 +11,8 @@ if TYPE_CHECKING:
 
 
 class User(UserBase, table=True):
+  """Represents a user of the application."""
+
   __tablename__ = "users"  # type: ignore
 
   id: UUID = Field(default_factory=uuid4, primary_key=True)

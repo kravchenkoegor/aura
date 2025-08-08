@@ -7,6 +7,8 @@ from app.schemas import ComplimentOutput
 
 
 class ComplimentService:
+  """Service for compliment-related operations."""
+
   def __init__(self, session: AsyncSession):
     self.session = session
 

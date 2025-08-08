@@ -24,6 +24,8 @@ if TYPE_CHECKING:
 
 
 class Task(SQLModel, table=True):
+  """Represents a background task to be executed."""
+
   __tablename__ = "tasks"  # type: ignore
 
   id: UUID = Field(

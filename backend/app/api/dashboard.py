@@ -20,6 +20,8 @@ async def list_tasks(
   skip: int = Query(0, ge=0),
   limit: int = Query(20, ge=1, le=100),
 ):
+  """List all tasks."""
+
   tasks = await task_service.get_all_tasks(skip=skip, limit=limit)
 
   return templates.TemplateResponse(
@@ -35,6 +37,8 @@ async def list_tasks(
 
 @router.get("/tasks/{id}", response_class=HTMLResponse)
 async def view_task(request: Request, id: str):
+  """View a single task."""
+
   return templates.TemplateResponse(
     request=request,
     name="tasks/view_task.html",

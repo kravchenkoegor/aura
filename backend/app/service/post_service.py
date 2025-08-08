@@ -8,6 +8,8 @@ from app.schemas import PostPublic, PostUpdate
 
 
 class PostService:
+  """Service for post-related operations."""
+
   def __init__(
     self,
     session: AsyncSession,
@@ -19,6 +21,8 @@ class PostService:
     post_id: str,
     user_id: UUID,
   ) -> None:
+    """Create a new post."""
+
     _ = await create_post(
       session=self.session,
       post_id=post_id,
@@ -30,6 +34,8 @@ class PostService:
     post_id: str,
     user_id: UUID,
   ) -> Optional[PostPublic]:
+    """Get a post by its ID."""
+
     post = await get_post_by_id(
       session=self.session,
       post_id=post_id,
@@ -45,6 +51,8 @@ class PostService:
     user_id: UUID,
     post_update: PostUpdate,
   ) -> Optional[PostPublic]:
+    """Update a post."""
+
     post = await update_post(
       session=self.session,
       post_id=post_id,

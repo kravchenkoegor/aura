@@ -5,6 +5,8 @@ from app.models import Language
 
 
 async def create_languages(session: AsyncSession):
+  """Create the languages in the database."""
+
   stmt = (
     insert(Language)
     .values(

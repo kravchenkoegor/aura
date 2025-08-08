@@ -64,9 +64,7 @@ async def _publish_task_update(
   task_id: str,
   payload: Dict[str, Any],
 ):
-  """
-  Публикует обновление статуса задачи в её персональный Redis Stream.
-  """
+  """Publishes a task status update to its dedicated Redis Stream."""
 
   stream_name = f"task:{task_id}:updates"
 
@@ -92,6 +90,8 @@ async def handle_message(
   redis_client: Redis,
   message: dict,
 ) -> Optional[List[dict]]:
+  """Handle a single message from the Redis stream."""
+
   task_id = message.get("task_id")
   url = message.get("url")
   user_id = message.get("user_id")
@@ -225,7 +225,7 @@ async def handle_message(
 
 
 async def _process_entry(redis_client: Redis, entry_id: str, data: dict):
-  """Обработка одной записи из Stream."""
+  """Process a single entry from the Stream."""
 
   try:
     payload = {
@@ -244,6 +244,8 @@ async def _process_entry(redis_client: Redis, entry_id: str, data: dict):
 
 
 async def start_worker(concurrency: int = 3):
+  """Start the worker."""
+
   redis_url = os.getenv("REDIS_URL")
   if not redis_url:
     logger.warning("REDIS_URL is not set!")
@@ -295,7 +297,7 @@ async def start_worker(concurrency: int = 3):
 
     except asyncio.CancelledError:
       logger.info("Worker cancelled.")
-      # Здесь можно добавить логику graceful shutdown, например, дождаться завершения текущих задач
+      # Graceful shutdown logic can be added here, e.g., waiting for current tasks to complete
       break
     except RedisError:
       logger.exception("Error in worker loop")

@@ -29,6 +29,8 @@ async def view_image_by_id(
   image_service: ImageServiceDep,
   image_id: str,
 ):
+  """View an image by its ID."""
+
   try:
     uuid.UUID(image_id)
 

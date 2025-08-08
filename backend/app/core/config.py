@@ -146,14 +146,16 @@ class Settings(BaseSettings):
 
   @computed_field  # type: ignore[prop-decorator]
   @property
-  def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
-    return MultiHostUrl.build(
-      scheme="postgresql+psycopg",
-      username=self.POSTGRES_USER,
-      password=self.POSTGRES_PASSWORD,
-      host=self.POSTGRES_SERVER,
-      port=self.POSTGRES_PORT,
-      path=self.POSTGRES_DB,
+  def SQLALCHEMY_DATABASE_URI(self) -> str:
+    return str(
+      MultiHostUrl.build(
+        scheme="postgresql+psycopg",
+        username=self.POSTGRES_USER,
+        password=self.POSTGRES_PASSWORD,
+        host=self.POSTGRES_SERVER,
+        port=self.POSTGRES_PORT,
+        path=self.POSTGRES_DB,
+      )
     )
 
   # Email Configuration
@@ -168,6 +170,8 @@ class Settings(BaseSettings):
 
   @model_validator(mode="after")
   def _set_default_emails_from(self) -> Self:
+    """Set a default for EMAILS_FROM_NAME if not provided."""
+
     if not self.EMAILS_FROM_NAME:
       self.EMAILS_FROM_NAME = self.PROJECT_NAME
     return self

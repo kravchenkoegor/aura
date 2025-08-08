@@ -11,6 +11,8 @@ from app.schemas import ImagePublic
 
 
 class ImageService:
+  """Service for image-related operations."""
+
   def __init__(
     self,
     session: AsyncSession,
@@ -21,6 +23,8 @@ class ImageService:
     self,
     image_id: str,
   ) -> Optional[ImagePublic]:
+    """Get an image by its ID."""
+
     image = await get_image_by_id(
       session=self.session,
       image_id=image_id,
@@ -34,6 +38,8 @@ class ImageService:
     post_id: str,
     user_id: UUID,
   ) -> Optional[ImagePublic]:
+    """Get the primary image for a post."""
+
     image = await get_primary_image_by_post_id(
       session=self.session,
       post_id=post_id,

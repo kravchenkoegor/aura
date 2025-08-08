@@ -47,6 +47,8 @@ async def get_image_by_id(
   session: AsyncSession,
   image_id: str,
 ) -> Optional[Image]:
+  """Get an image by its ID."""
+
   stmt = select(Image).where(Image.id == image_id)
 
   result = await session.exec(stmt)

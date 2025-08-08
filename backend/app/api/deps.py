@@ -31,6 +31,8 @@ reusable_oauth2 = OAuth2PasswordBearer(tokenUrl="/login/access-token")
 
 
 async def get_db_async() -> AsyncGenerator[AsyncSession, None]:
+  """Get an async database session."""
+
   async with async_session() as session:
     yield session
 
@@ -86,6 +88,8 @@ async def get_current_user(
   token: TokenDep,
   request: Request,
 ) -> User:
+  """Get the current user from a token."""
+
   try:
     payload = jwt.decode(
       token,
@@ -140,7 +144,7 @@ async def get_current_user_ws(
       code=status.WS_1008_POLICY_VIOLATION,
       reason="Missing token",
     )
-    raise WebSocketDisconnect("Missing token")
+    raise WebSocketDisconnect()
 
   try:
     user = await _get_user_from_token(token=token, session=session)
@@ -157,13 +161,15 @@ async def get_current_user_ws(
       reason = "Inactive user"
 
     await websocket.close(code=code, reason=reason)
-    raise WebSocketDisconnect(reason) from e
+    raise WebSocketDisconnect() from e
 
 
 CurrentUserWS = Annotated[User, Depends(get_current_user_ws)]
 
 
 def get_current_active_superuser(current_user: CurrentUser) -> User:
+  """Get the current active superuser."""
+
   if not current_user.is_superuser:
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
@@ -171,6 +177,8 @@ def get_current_active_superuser(current_user: CurrentUser) -> User:
 
 
 def get_compliment_service(session: AsyncSessionDep) -> ComplimentService:
+  """Get the compliment service."""
+
   return ComplimentService(session=session)
 
 
@@ -178,6 +186,8 @@ ComplimentServiceDep = Annotated[ComplimentService, Depends(get_compliment_servi
 
 
 def get_gemini_service(session: AsyncSessionDep) -> GeminiService:
+  """Get the Gemini service."""
+
   return GeminiService(session=session)
 
 
@@ -185,6 +195,8 @@ GeminiServiceDep = Annotated[GeminiService, Depends(get_gemini_service)]
 
 
 def get_image_service(session: AsyncSessionDep) -> ImageService:
+  """Get the image service."""
+
   return ImageService(session=session)
 
 
@@ -192,6 +204,8 @@ ImageServiceDep = Annotated[ImageService, Depends(get_image_service)]
 
 
 def get_post_service(session: AsyncSessionDep) -> PostService:
+  """Get the post service."""
+
   return PostService(session=session)
 
 
@@ -199,6 +213,8 @@ PostServiceDep = Annotated[PostService, Depends(get_post_service)]
 
 
 def get_task_service(session: AsyncSessionDep) -> TaskService:
+  """Get the task service."""
+
   return TaskService(session=session)
 
 

@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 class GeminiService:
+  """Service for interacting with the Gemini API."""
+
   def __init__(self, session: AsyncSessionDep):
     self.session = session
     self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
@@ -27,6 +29,11 @@ class GeminiService:
     self.model = settings.GEMINI_MODEL
 
   def _get_system_prompt(self) -> str:
+    """Get the system prompt from the configured file path."""
+
+    if not settings.SYSTEM_PROMPT_PATH:
+      raise ValueError("SYSTEM_PROMPT_PATH is not set")
+
     try:
       with open(settings.SYSTEM_PROMPT_PATH, "r", encoding="utf-8") as f:
         return f.read()
@@ -39,12 +46,17 @@ class GeminiService:
     self,
     image_bytes: bytes,
   ) -> tuple[GenerationMetadata, list[ComplimentOutput]]:
+    """Create a chat with the Gemini API and get compliments."""
+
     start_time = datetime.now()
 
     image_part = types.Part.from_bytes(
       data=image_bytes,
       mime_type="image/jpeg",
     )
+
+    if not self.model:
+      raise ValueError("GEMINI_MODEL is not set")
 
     chat = self.client.aio.chats.create(model=self.model)
 
@@ -62,7 +74,7 @@ class GeminiService:
 
     usage = response.usage_metadata
     generation_metadata = GenerationMetadata(
-      model_used=self.model,
+      model_used=self.model or "unknown",
       prompt_token_count=usage.prompt_token_count if usage else 0,
       candidates_token_count=usage.candidates_token_count if usage else 0,
       total_token_count=usage.total_token_count if usage else 0,

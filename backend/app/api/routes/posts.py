@@ -28,6 +28,8 @@ async def get_post_by_id(
   post_service: PostServiceDep,
   post_id: str,
 ) -> JSONResponse:
+  """Get a post by its ID."""
+
   post_data = await post_service.get_post_by_id(
     post_id=post_id,
     user_id=current_user.id,

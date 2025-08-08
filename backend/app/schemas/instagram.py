@@ -5,6 +5,8 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class InstagramUrlRequest(BaseModel):
+  """Schema for validating an Instagram URL."""
+
   url: str = Field(
     ...,
     description="Valid Instagram post URL (p/, reel/, tv/)",
@@ -16,12 +18,18 @@ class InstagramUrlRequest(BaseModel):
   @field_validator("url")
   @classmethod
   def validate_instagram_url(cls, v: str) -> str:
+    """Validate the Instagram URL."""
+
     parsed = urlparse(v)
 
     if parsed.scheme != "https":
       raise ValueError("URL must use HTTPS")
 
-    if parsed.netloc not in {"instagram.com", "www.instagram.com", "m.instagram.com"}:
+    if parsed.netloc not in {
+      "instagram.com",
+      "www.instagram.com",
+      "m.instagram.com",
+    }:
       raise ValueError("URL must be from instagram.com")
 
     if not re.search(r"/(p|reel|tv)/", v):

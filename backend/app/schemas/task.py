@@ -7,11 +7,15 @@ from sqlmodel import SQLModel
 
 
 class TaskType(str, Enum):
+  """Enum for task types."""
+
   llm_generate = "llm_generate"
   instagram_download = "instagram_download"
 
 
 class TaskStatus(str, Enum):
+  """Enum for task statuses."""
+
   pending = "pending"
   in_progress = "in_progress"
   done = "done"
@@ -20,6 +24,8 @@ class TaskStatus(str, Enum):
 
 
 class TaskBase(SQLModel):
+  """Base schema for a task."""
+
   id: UUID
   type: TaskType
   post_id: str
@@ -27,10 +33,14 @@ class TaskBase(SQLModel):
 
 
 class TaskCreate(TaskBase):
+  """Schema for creating a new task."""
+
   user_id: UUID
 
 
 class TaskPublic(TaskBase):
+  """Public schema for a task."""
+
   id: UUID
   status: TaskStatus
   user_id: UUID
@@ -39,6 +49,8 @@ class TaskPublic(TaskBase):
 
 
 class TaskUpdate(SQLModel):
+  """Schema for updating a task."""
+
   status: Optional[TaskStatus] = None
   error_message: Optional[str] = None
   started_at: Optional[datetime] = None

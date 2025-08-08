@@ -13,10 +13,14 @@ from app.schemas import (
 
 
 class TaskService:
+  """Service for task-related operations."""
+
   def __init__(self, session: AsyncSession):
     self.session = session
 
   async def create_task(self, task_create: TaskCreate) -> TaskPublic:
+    """Create a new task."""
+
     task = await task_repo.create_task(
       session=self.session,
       task_create=task_create,
@@ -29,6 +33,8 @@ class TaskService:
     task_id: str,
     user_id: UUID,
   ) -> Optional[TaskPublic]:
+    """Get a task by its ID."""
+
     task = await task_repo.get_task_by_id(
       session=self.session,
       task_id=task_id,
@@ -44,6 +50,8 @@ class TaskService:
     user_id: UUID,
     task_update: TaskUpdate,
   ) -> Optional[TaskPublic]:
+    """Update a task."""
+
     updated_task = await task_repo.update_task(
       session=self.session,
       task_id=task_id,
@@ -60,6 +68,8 @@ class TaskService:
     user_id: UUID,
     status: TaskStatus,
   ) -> Optional[TaskPublic]:
+    """Set the status of a task."""
+
     updated_task = await task_repo.set_task_status(
       session=self.session,
       task_id=task_id,
@@ -76,6 +86,8 @@ class TaskService:
     limit: int,
     user_id: Optional[UUID] = None,
   ) -> Sequence[TaskPublic]:
+    """Get all tasks."""
+
     tasks = await task_repo.get_all_tasks(
       session=self.session,
       skip=skip,
