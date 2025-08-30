@@ -8,6 +8,11 @@ from typing import TYPE_CHECKING
 from google import genai
 from google.genai import types
 from pydantic import ValidationError
+from tenacity import (
+  retry,
+  stop_after_attempt,
+  wait_exponential,
+)
 
 from app.core.config import settings
 from app.models import GenerationMetadata
@@ -24,9 +29,11 @@ class GeminiService:
 
   def __init__(self, session: AsyncSessionDep):
     self.session = session
+
     self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
-    self.system_prompt = self._get_system_prompt()
     self.model = settings.GEMINI_MODEL
+
+    self._system_prompt = self._get_system_prompt()
 
   def _get_system_prompt(self) -> str:
     """Get the system prompt from the configured file path."""
@@ -42,6 +49,11 @@ class GeminiService:
       logger.error(f"System prompt file not found at {settings.SYSTEM_PROMPT_PATH}")
       raise
 
+  @retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    reraise=True,
+  )
   async def create_chat(
     self,
     image_bytes: bytes,
@@ -61,7 +73,7 @@ class GeminiService:
     chat = self.client.aio.chats.create(model=self.model)
 
     response = await chat.send_message(
-      message=[image_part, self.system_prompt],
+      message=[image_part, self._system_prompt],
       config=types.GenerateContentConfig(
         temperature=1.5,
         top_p=0.95,

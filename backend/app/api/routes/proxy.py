@@ -12,7 +12,7 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.api.deps import ImageServiceDep
+from app.api.deps import CurrentUser, ImageServiceDep
 from app.core.rate_limit import rate_limit_default
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,7 @@ router = APIRouter(prefix="/images", tags=["images"])
 async def view_image_by_id(
   request: Request,
   *,
+  current_user: CurrentUser,
   image_service: ImageServiceDep,
   image_id: str,
 ):
@@ -43,6 +44,9 @@ async def view_image_by_id(
   image = await image_service.get_image_by_id(image_id=image_id)
   if not image:
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+  if image.post.user_id != current_user.id and not current_user.is_superuser:
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
   url = image.storage_key
 
