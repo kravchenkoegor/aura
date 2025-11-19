@@ -17,8 +17,8 @@ Clone the repo and configure your secrets.
 
 ```bash
 # 1. Clone repository
-git clone <repository_url>
-cd <repository_name>/backend
+git clone https://github.com/kravchenkoegor/aura
+cd aura/backend
 ```
 
 ### 2. Create .env file
