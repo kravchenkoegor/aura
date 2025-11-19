@@ -46,10 +46,11 @@ async def create_images(
 async def get_image_by_id(
   session: AsyncSession,
   image_id: str,
+  user_id: UUID,
 ) -> Optional[Image]:
   """Get an image by its ID."""
 
-  stmt = select(Image).where(Image.id == image_id)
+  stmt = select(Image).join(Post).where(Image.id == image_id, Post.user_id == user_id)
 
   result = await session.exec(stmt)
   return result.one_or_none()

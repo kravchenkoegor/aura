@@ -58,7 +58,7 @@ def validate_cors_configuration() -> None:
 
   issues = []
 
-  if settings.ENVIRONMENT == "production" and "*" in settings.all_cors_origins:
+  if settings.ENVIRONMENT == "production" and "*" in settings.cors.all_cors_origins:
     issues.append(
       "CRITICAL: Wildcard (*) CORS origin detected in production environment."
     )
@@ -66,7 +66,7 @@ def validate_cors_configuration() -> None:
   if settings.ENVIRONMENT == "production":
     localhost_origins = [
       origin
-      for origin in settings.all_cors_origins
+      for origin in settings.cors.all_cors_origins
       if "localhost" in origin or "127.0.0.1" in origin
     ]
 
@@ -75,7 +75,9 @@ def validate_cors_configuration() -> None:
 
   if settings.ENVIRONMENT == "production":
     http_origins = [
-      origin for origin in settings.all_cors_origins if origin.startswith("http://")
+      origin
+      for origin in settings.cors.all_cors_origins
+      if origin.startswith("http://")
     ]
 
     if http_origins:
@@ -122,15 +124,15 @@ async def lifespan(app: FastAPI):
     logger.info("✓ Redis connection established and verified")
 
     # Log CORS configuration details
-    if settings.cors_enabled:
+    if settings.cors.CORS_ENABLED:
       logger.info("CORS Configuration:")
-      logger.info("  Allowed Origins (%d):", len(settings.all_cors_origins))
-      for origin in settings.all_cors_origins:
+      logger.info("  Allowed Origins (%d):", len(settings.cors.all_cors_origins))
+      for origin in settings.cors.all_cors_origins:
         logger.info("    • %s", origin)
-      logger.info("  Allow Credentials: %s", settings.CORS_ALLOW_CREDENTIALS)
-      logger.info("  Allow Methods: %s", settings.CORS_ALLOW_METHODS)
-      logger.info("  Allow Headers: %s", settings.CORS_ALLOW_HEADERS)
-      logger.info("  Max Age: %d seconds", settings.CORS_MAX_AGE)
+      logger.info("  Allow Credentials: %s", settings.cors.CORS_ALLOW_CREDENTIALS)
+      logger.info("  Allow Methods: %s", settings.cors.CORS_ALLOW_METHODS)
+      logger.info("  Allow Headers: %s", settings.cors.CORS_ALLOW_HEADERS)
+      logger.info("  Max Age: %d seconds", settings.cors.CORS_MAX_AGE)
     else:
       logger.warning("⚠ CORS is disabled")
 
@@ -185,27 +187,27 @@ app = FastAPI(
 
 app.state.limiter = limiter
 
-if settings.RATE_LIMIT_ENABLED:
+if settings.rate_limit.RATE_LIMIT_ENABLED:
   app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
   app.add_middleware(SlowAPIMiddleware)
   logger.info("✓ Rate limiting middleware enabled")
 
 # Configure CORS middleware
-if settings.cors_enabled:
+if settings.cors.CORS_ENABLED:
   app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.all_cors_origins,
-    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
-    allow_methods=settings.CORS_ALLOW_METHODS,
-    allow_headers=settings.CORS_ALLOW_HEADERS,
-    expose_headers=settings.CORS_EXPOSE_HEADERS,
-    max_age=settings.CORS_MAX_AGE,
+    allow_origins=settings.cors.all_cors_origins,
+    allow_credentials=settings.cors.CORS_ALLOW_CREDENTIALS,
+    allow_methods=settings.cors.CORS_ALLOW_METHODS,
+    allow_headers=settings.cors.CORS_ALLOW_HEADERS,
+    expose_headers=settings.cors.CORS_EXPOSE_HEADERS,
+    max_age=settings.cors.CORS_MAX_AGE,
   )
 
 # Add trusted host middleware for production
 if settings.ENVIRONMENT == "production":
   allowed_hosts = []
-  for origin in settings.all_cors_origins:
+  for origin in settings.cors.all_cors_origins:
     if "://" in origin:
       host = origin.split("://")[1].split("/")[0].split(":")[0]
       allowed_hosts.append(host)

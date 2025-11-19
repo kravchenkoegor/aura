@@ -22,12 +22,14 @@ class ImageService:
   async def get_image_by_id(
     self,
     image_id: str,
+    user_id: UUID,
   ) -> Optional[ImagePublic]:
     """Get an image by its ID."""
 
     image = await get_image_by_id(
       session=self.session,
       image_id=image_id,
+      user_id=user_id,
     )
 
     if image:

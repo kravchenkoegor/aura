@@ -56,7 +56,7 @@ async def _get_user_from_token(token: str, session: AsyncSession) -> User:
   try:
     payload = jwt.decode(
       token,
-      settings.SECRET_KEY,
+      settings.security.SECRET_KEY,
       algorithms=[security.ALGORITHM],
     )
     token_data = TokenPayload(**payload)
@@ -93,7 +93,7 @@ async def get_current_user(
   try:
     payload = jwt.decode(
       token,
-      settings.SECRET_KEY,
+      settings.security.SECRET_KEY,
       algorithms=[security.ALGORITHM],
     )
     token_data = TokenPayload(**payload)

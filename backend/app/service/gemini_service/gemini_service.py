@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from google import genai
@@ -30,24 +31,21 @@ class GeminiService:
   def __init__(self, session: AsyncSessionDep):
     self.session = session
 
-    self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
-    self.model = settings.GEMINI_MODEL
+    self.client = genai.Client(api_key=settings.ai.GEMINI_API_KEY)
+    self.model = settings.ai.GEMINI_MODEL
 
     self._system_prompt = self._get_system_prompt()
 
   def _get_system_prompt(self) -> str:
     """Get the system prompt from the configured file path."""
 
-    if not settings.SYSTEM_PROMPT_PATH:
-      raise ValueError("SYSTEM_PROMPT_PATH is not set")
+    system_prompt_path = Path("app/service/gemini_service/prompts/structured_json.md")
 
-    try:
-      with open(settings.SYSTEM_PROMPT_PATH, "r", encoding="utf-8") as f:
-        return f.read()
+    if not system_prompt_path.exists():
+      logger.error(f"System prompt file not found")
+      raise FileNotFoundError()
 
-    except FileNotFoundError:
-      logger.error(f"System prompt file not found at {settings.SYSTEM_PROMPT_PATH}")
-      raise
+    return system_prompt_path.read_text()
 
   @retry(
     stop=stop_after_attempt(3),

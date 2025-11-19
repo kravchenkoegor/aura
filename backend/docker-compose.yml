@@ -2,6 +2,7 @@ name: aura-app
 
 services:
   app:
+    container_name: backend
     build: .
     env_file:
       - ./.env
@@ -17,6 +18,7 @@ services:
       - aura
 
   instagram_worker:
+    container_name: instagram_worker
     build: .
     env_file:
       - ./.env
@@ -30,6 +32,7 @@ services:
       - aura
 
   llm_worker:
+    container_name: llm_worker
     build: .
     env_file:
       - ./.env
@@ -44,6 +47,7 @@ services:
 
   db:
     image: postgres:15-alpine
+    container_name: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
@@ -57,6 +61,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    container_name: redis
     volumes:
       - redis_data:/data
     ports:
@@ -66,7 +71,7 @@ services:
 
   mailcrab:
     image: marlonb/mailcrab:latest
-    container_name: mailcrab_server
+    container_name: mail
     ports:
       - "1080:1080"
       - "1025:1025"

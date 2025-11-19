@@ -10,6 +10,48 @@ Aura is an event-driven application that analyzes Instagram posts using Computer
 *   **Real-Time Updates**: WebSocket integration provides live feedback on task status (queuing, downloading, generating).
 *   **Secure Authentication**: JWT-based OAuth2 authentication with email verification and password recovery.
 
+## 🚀 Quick Start
+
+### 1. Setup Environment
+Clone the repo and configure your secrets.
+
+```bash
+# 1. Clone repository
+git clone <repository_url>
+cd <repository_name>/backend
+```
+
+### 2. Create .env file
+`cp .env.example .env`
+
+⚠️ Critical Configuration:
+Open `.env` and update the following variables. The app will not work properly without them:
+- `GEMINI_API_KEY`: Required for the AI generation worker.
+- `FIRST_SUPERUSER`: The email you will use to log in.
+- `FIRST_SUPERUSER_PASSWORD`: The password for that admin user.
+- `POSTGRES_PASSWORD`: Set a secure password for the database.
+
+### 3. Build and Launch
+To ensure the database tables exist before the app tries to seed data, run these commands in order:
+
+```bash
+# 1. Build the Docker images
+docker compose build
+
+# 2. Run Database Migrations
+# This creates the necessary tables in the Postgres database.
+docker compose run --rm app alembic upgrade head
+
+# 3. Start the Application
+# The app will automatically create your Superuser when it starts.
+docker compose up -d
+```
+
+### 4. Verify Installation
+API Documentation: Go to http://localhost:8000/docs.
+
+Login: Click the "Authorize" button and use the credentials you defined in `.env` (`FIRST_SUPERUSER` / `FIRST_SUPERUSER_PASSWORD`).
+
 ## 🏗 Architecture Overview
 
 Aura is built on a **Microservices-lite**, **Event-Driven** architecture within a containerized environment. It separates the API layer from heavy background processing tasks (downloading media and querying LLMs) using Redis Streams as a message broker.

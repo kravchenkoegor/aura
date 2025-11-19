@@ -27,10 +27,10 @@ def get_rate_limit_key(request: Request) -> str:
     A unique identifier string for rate limiting
   """
 
-  strategy = settings.RATE_LIMIT_KEY_STRATEGY
+  strategy = settings.rate_limit.RATE_LIMIT_KEY_STRATEGY
 
   ip_address = get_remote_address(request)
-  if ip_address in settings.RATE_LIMIT_EXEMPT_IPS:
+  if ip_address in settings.rate_limit.RATE_LIMIT_EXEMPT_IPS:
     logger.debug("IP %s is exempt from rate limiting", ip_address)
     return f"exempt:{ip_address}"
 
@@ -87,9 +87,11 @@ def rate_limit_exceeded_handler(request: Request, exc: Exception) -> Response:
 
 limiter = Limiter(
   key_func=get_rate_limit_key,
-  default_limits=[settings.RATE_LIMIT_DEFAULT] if settings.RATE_LIMIT_ENABLED else [],
-  storage_uri=settings.rate_limit_storage_uri,
-  headers_enabled=settings.RATE_LIMIT_HEADERS_ENABLED,
+  default_limits=[settings.rate_limit.RATE_LIMIT_DEFAULT]
+  if settings.rate_limit.RATE_LIMIT_ENABLED
+  else [],
+  storage_uri=settings.rate_limit.RATE_LIMIT_STORAGE_URL,
+  headers_enabled=settings.rate_limit.RATE_LIMIT_HEADERS_ENABLED,
   swallow_errors=False,
 )
 
@@ -105,7 +107,7 @@ def get_rate_limit_decorator(limit: str) -> Callable:
     Decorator function for rate limiting
   """
 
-  if not settings.RATE_LIMIT_ENABLED:
+  if not settings.rate_limit.RATE_LIMIT_ENABLED:
 
     def noop_decorator(func):
       return func
@@ -115,6 +117,8 @@ def get_rate_limit_decorator(limit: str) -> Callable:
   return limiter.limit(limit)
 
 
-rate_limit_default = limiter.limit(settings.RATE_LIMIT_DEFAULT)
-rate_limit_auth = limiter.limit(settings.RATE_LIMIT_AUTH)
-rate_limit_password_recovery = limiter.limit(settings.RATE_LIMIT_PASSWORD_RECOVERY)
+rate_limit_default = limiter.limit(settings.rate_limit.RATE_LIMIT_DEFAULT)
+rate_limit_auth = limiter.limit(settings.rate_limit.RATE_LIMIT_AUTH)
+rate_limit_password_recovery = limiter.limit(
+  settings.rate_limit.RATE_LIMIT_PASSWORD_RECOVERY
+)

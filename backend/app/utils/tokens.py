@@ -27,8 +27,8 @@ def _generate_token(email: str, expires_delta: timedelta, audience: str) -> str:
 
   encoded_jwt = jwt.encode(
     to_encode,
-    settings.SECRET_KEY,
-    algorithm=settings.JWT_ALGORITHM,
+    settings.security.SECRET_KEY,
+    algorithm=settings.security.JWT_ALGORITHM,
   )
   return encoded_jwt
 
@@ -48,8 +48,8 @@ def _verify_token(token: str, expected_audience: str) -> str | None:
   try:
     payload = jwt.decode(
       token,
-      settings.SECRET_KEY,
-      algorithms=[settings.JWT_ALGORITHM],
+      settings.security.SECRET_KEY,
+      algorithms=[settings.security.JWT_ALGORITHM],
       audience=expected_audience,
     )
 
@@ -68,7 +68,7 @@ def generate_password_reset_token(email: str) -> str:
   Generates a token for password reset.
   """
 
-  delta = timedelta(minutes=settings.EMAIL_RESET_TOKEN_EXPIRE_MINUTES)
+  delta = timedelta(minutes=settings.security.EMAIL_RESET_TOKEN_EXPIRE_MINUTES)
   return _generate_token(
     email=email,
     expires_delta=delta,
@@ -93,7 +93,7 @@ def generate_email_verify_token(email: str) -> str:
   Generates a token for email verification.
   """
 
-  delta = timedelta(hours=settings.EMAIL_VERIFY_TOKEN_EXPIRE_HOURS)
+  delta = timedelta(hours=settings.security.EMAIL_VERIFY_TOKEN_EXPIRE_HOURS)
   return _generate_token(
     email=email,
     expires_delta=delta,

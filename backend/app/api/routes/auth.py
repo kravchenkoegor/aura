@@ -163,7 +163,9 @@ async def sign_in(
       detail="Inactive user. Please verify your email first.",
     )
 
-  access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+  access_token_expires = timedelta(
+    minutes=settings.security.ACCESS_TOKEN_EXPIRE_MINUTES
+  )
   token_data = Token(
     token=security.create_access_token(
       user.id,

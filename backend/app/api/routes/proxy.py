@@ -41,12 +41,12 @@ async def view_image_by_id(
       detail=f"Invalid image_id: {image_id}",
     )
 
-  image = await image_service.get_image_by_id(image_id=image_id)
+  image = await image_service.get_image_by_id(
+    image_id=image_id,
+    user_id=current_user.id,
+  )
   if not image:
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-
-  if image.post.user_id != current_user.id and not current_user.is_superuser:
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
   url = image.storage_key
 

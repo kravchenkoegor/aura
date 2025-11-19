@@ -10,7 +10,7 @@ from app.core.config import settings
 def generate_password_reset_token(email: str) -> str:
   """Generate a password reset token."""
 
-  delta = timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
+  delta = timedelta(minutes=settings.security.EMAIL_RESET_TOKEN_EXPIRE_MINUTES)
   now = datetime.now(timezone.utc)
   expires = now + delta
   exp = expires.timestamp()
@@ -21,7 +21,7 @@ def generate_password_reset_token(email: str) -> str:
       "nbf": now,
       "sub": email,
     },
-    settings.SECRET_KEY,
+    settings.security.SECRET_KEY,
     algorithm=security.ALGORITHM,
   )
 
@@ -34,7 +34,7 @@ def verify_password_reset_token(token: str) -> str | None:
   try:
     decoded_token = jwt.decode(
       token,
-      settings.SECRET_KEY,
+      settings.security.SECRET_KEY,
       algorithms=[security.ALGORITHM],
     )
 
