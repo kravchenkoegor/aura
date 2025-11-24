@@ -1,0 +1,79 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Build & Start Containers
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USERNAME }}
+        run: |
+          ssh -i ~/.ssh/deploy_key $EC2_USER@$EC2_HOST << 'EOF'
+            set -e
+
+            mkdir -p ~/app && cd ~/app
+
+            if [ ! -d .git ]; then
+              git clone https://github.com/${{ github.repository }}.git .
+            fi
+            git fetch --all
+            git reset --hard origin/main
+
+            cd backend
+
+            ls -la
+
+            echo "Creating .env file..."
+            echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" > .env
+            echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+            echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
+            chmod 600 .env
+
+            ls -la
+
+            echo "Starting containers..."
+            docker compose pull
+            docker compose up -d --build --remove-orphans
+
+            docker image prune -f
+          EOF
+
+      - name: Health Check
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USERNAME }}
+        run: |
+          ssh -i ~/.ssh/deploy_key $EC2_USER@$EC2_HOST << 'EOF'
+            sleep 10
+            if ! docker compose ps --services --filter "status=running" | grep -q .; then
+              echo "ERROR: No containers are running!"
+              docker compose logs --tail=50
+              exit 1
+            fi
+            echo "Deployment successful!"
+            docker compose ps
+          EOF
