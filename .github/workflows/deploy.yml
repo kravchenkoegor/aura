@@ -52,15 +52,15 @@ jobs:
             echo "Creating .env file..."
             
             cat > .env << 'ENVEOF'
-${{ secrets.PROD_ENV_FILE }}
-ENVEOF
+          ${{ secrets.PROD_ENV_FILE }}
+          ENVEOF
 
             if [ ! -s .env ]; then
               echo "ERROR: .env file is empty!"
               exit 1
             fi
             
-            echo "✅ .env file created successfully"
+            echo "SUCCESS: .env file created"
             echo "Size: $(wc -c < .env) bytes"
             echo "Lines: $(wc -l < .env) lines"
 
@@ -100,7 +100,7 @@ ENVEOF
               exit 1
             fi
 
-            echo "✅ Deployment successful!"
+            echo "SUCCESS: Deployment successful!"
             echo "=== Running Containers ==="
             docker compose ps
           EOF
