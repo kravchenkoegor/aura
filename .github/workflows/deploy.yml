@@ -33,7 +33,7 @@ jobs:
           EC2_USER: ${{ secrets.EC2_USERNAME }}
           PROD_ENV: ${{ secrets.PROD_ENV_FILE }}
         run: |
-          ssh -i ~/.ssh/deploy_key $EC2_USER@$EC2_HOST << 'EOF'
+          ssh -i ~/.ssh/deploy_key $EC2_USER@$EC2_HOST << 'ENDSSH'
             set -e
 
             # Navigate to app directory
@@ -49,28 +49,35 @@ jobs:
             # Navigate to backend directory where docker-compose.yml is
             cd ~/app/backend
 
-            # Create .env file
             echo "Creating .env file..."
-            printf "%s" "$PROD_ENV" > .env
+            
+            cat > .env << 'ENVEOF'
+${{ secrets.PROD_ENV_FILE }}
+ENVEOF
+
+            if [ ! -s .env ]; then
+              echo "ERROR: .env file is empty!"
+              exit 1
+            fi
+            
+            echo "✅ .env file created successfully"
+            echo "Size: $(wc -c < .env) bytes"
+            echo "Lines: $(wc -l < .env) lines"
+
             chmod 600 .env
 
-            # Verify docker-compose.yml exists
             if [ ! -f docker-compose.yml ]; then
               echo "ERROR: docker-compose.yml not found in $(pwd)"
               ls -la
               exit 1
             fi
 
-            # Pull and start containers
             echo "Starting containers..."
             docker compose pull
             docker compose up -d --build --remove-orphans
 
-            # Clean up old images
             docker image prune -f
-
-            echo "Deployment completed!"
-          EOF
+          ENDSSH
 
       - name: Health Check
         env:

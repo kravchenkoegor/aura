@@ -1,50 +1,6 @@
 name: aura-app
 
 services:
-  app:
-    container_name: backend
-    build: .
-    env_file:
-      - ./.env
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./app:/code/app
-      - ./scripts:/code/scripts
-    depends_on:
-      - db
-      - redis
-    networks:
-      - aura
-
-  instagram_worker:
-    container_name: instagram_worker
-    build: .
-    env_file:
-      - ./.env
-    command: ["python", "-m", "app.workers.instagram_download_worker"]
-    volumes:
-      - ./app:/code/app
-    depends_on:
-      - db
-      - redis
-    networks:
-      - aura
-
-  llm_worker:
-    container_name: llm_worker
-    build: .
-    env_file:
-      - ./.env
-    command: ["python", "-m", "app.workers.llm_worker"]
-    volumes:
-      - ./app:/code/app
-    depends_on:
-      - db
-      - redis
-    networks:
-      - aura
-
   db:
     image: postgres:15-alpine
     container_name: postgres
@@ -58,6 +14,11 @@ services:
       - "5432:5432"
     networks:
       - aura
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -68,7 +29,62 @@ services:
       - "6379:6379"
     networks:
       - aura
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
+  app:
+    container_name: backend
+    build: .
+    env_file:
+      - ./.env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/code/app
+      - ./scripts:/code/scripts
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - aura
+
+  instagram_worker:
+    container_name: instagram_worker
+    build: .
+    env_file:
+      - ./.env
+    command: ["python", "-m", "app.workers.instagram_download_worker"]
+    volumes:
+      - ./app:/code/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - aura
+
+  llm_worker:
+    container_name: llm_worker
+    build: .
+    env_file:
+      - ./.env
+    command: ["python", "-m", "app.workers.llm_worker"]
+    volumes:
+      - ./app:/code/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - aura
+  
   mailcrab:
     image: marlonb/mailcrab:latest
     container_name: mail
@@ -77,6 +93,19 @@ services:
       - "1025:1025"
     networks:
       - aura
+
+  migrate:
+    build: .
+    env_file:
+      - ./.env
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - aura
+    profiles:
+      - tools
 
 volumes:
   postgres_data:
