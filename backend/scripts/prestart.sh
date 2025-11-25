@@ -7,6 +7,6 @@ export PYTHONPATH=$(pwd)
 
 python app/backend_pre_start.py
 
-docker compose run --rm migrate
+alembic upgrade head
 
 python app/initial_data.py
