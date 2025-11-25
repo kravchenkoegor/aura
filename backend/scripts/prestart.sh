@@ -13,4 +13,6 @@ echo "Checking migrations..."
 alembic current || echo "No migrations yet"
 alembic upgrade head || echo "Migrations already up to date or failed"
 
+python app/initial_data.py
+
 echo "Prestart completed!"
