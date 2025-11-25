@@ -22,7 +22,7 @@ def generate_password_reset_token(email: str) -> str:
       "sub": email,
     },
     settings.security.SECRET_KEY,
-    algorithm=security.ALGORITHM,
+    algorithm=settings.security.JWT_ALGORITHM,
   )
 
   return encoded_jwt
@@ -35,7 +35,7 @@ def verify_password_reset_token(token: str) -> str | None:
     decoded_token = jwt.decode(
       token,
       settings.security.SECRET_KEY,
-      algorithms=[security.ALGORITHM],
+      algorithms=[settings.security.JWT_ALGORITHM],
     )
 
     return str(decoded_token["sub"])

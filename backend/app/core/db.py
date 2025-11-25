@@ -7,8 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.core.security import get_password_hash
-from app.data.language import create_languages
-from app.models import User
+from app.models import Language, User
 
 async_engine = create_async_engine(
   str(settings.db.SQLALCHEMY_DATABASE_URI),
@@ -26,8 +25,8 @@ async def init_db(session: AsyncSession) -> None:
   """Initializes the database with necessary data."""
 
   user_stmt = select(User).where(User.email == settings.security.FIRST_SUPERUSER)
-  result = await session.exec(user_stmt)
-  user = result.first()
+  user_result = await session.exec(user_stmt)
+  user = user_result.first()
 
   if not user:
     hashed_password = get_password_hash(settings.security.FIRST_SUPERUSER_PASSWORD)
@@ -41,4 +40,15 @@ async def init_db(session: AsyncSession) -> None:
     session.add(user)
     await session.commit()
 
-  await create_languages(session=session)
+  lang_stmt = select(Language).where(Language.id == "en")
+  lang_result = await session.exec(lang_stmt)
+  lang = lang_result.first()
+
+  if not lang:
+    languages = [
+      Language(id="en", name="English"),
+      Language(id="tr", name="Türkçe"),
+    ]
+
+    session.add_all(languages)
+    await session.commit()

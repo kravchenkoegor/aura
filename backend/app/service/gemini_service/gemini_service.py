@@ -38,12 +38,13 @@ class GeminiService:
 
   def _get_system_prompt(self) -> str:
     """Get the system prompt from the configured file path."""
-
     system_prompt_path = Path("app/service/gemini_service/prompts/structured_json.md")
 
     if not system_prompt_path.exists():
-      logger.error(f"System prompt file not found")
-      raise FileNotFoundError()
+      logger.error("System prompt file not found at %s", system_prompt_path)
+      raise FileNotFoundError(
+        f"System prompt file not found: {system_prompt_path}",
+      )
 
     return system_prompt_path.read_text()
 
@@ -70,6 +71,8 @@ class GeminiService:
 
     chat = self.client.aio.chats.create(model=self.model)
 
+    logger.info("Sending request to Gemini API model: %s", self.model)
+
     response = await chat.send_message(
       message=[image_part, self._system_prompt],
       config=types.GenerateContentConfig(
@@ -83,11 +86,16 @@ class GeminiService:
     end_time = datetime.now()
 
     usage = response.usage_metadata
+
+    prompt_tokens = (usage.prompt_token_count or 0) if usage else 0
+    candidates_tokens = (usage.candidates_token_count or 0) if usage else 0
+    total_tokens = (usage.total_token_count or 0) if usage else 0
+
     generation_metadata = GenerationMetadata(
       model_used=self.model or "unknown",
-      prompt_token_count=usage.prompt_token_count if usage else 0,
-      candidates_token_count=usage.candidates_token_count if usage else 0,
-      total_token_count=usage.total_token_count if usage else 0,
+      prompt_token_count=prompt_tokens,
+      candidates_token_count=candidates_tokens,
+      total_token_count=total_tokens,
       analysis_duration_ms=int((end_time - start_time).total_seconds() * 1000),
     )
 
@@ -96,20 +104,28 @@ class GeminiService:
     await self.session.refresh(generation_metadata)
 
     candidates: list[ComplimentOutput] = []
-    if response.candidates:
-      for i, candidate in enumerate(response.candidates, 1):
-        if candidate.content and candidate.content.parts:
-          response_text = candidate.content.parts[0].text or ""
 
-          try:
-            validated_output = ComplimentOutput.model_validate_json(response_text)
-            candidates.append(validated_output)
+    if not response.candidates:
+      logger.warning("Gemini returned no candidates. Check safety settings or prompt.")
+      return (generation_metadata, [])
 
-          except (json.JSONDecodeError, ValidationError) as e:
-            logger.warning(
-              f"Invalid response format for candidate {i}: {e}",
-              extra={"response_text": response_text},
-            )
-            continue
+    for i, candidate in enumerate(response.candidates, 1):
+      if candidate.content and candidate.content.parts:
+        response_text = candidate.content.parts[0].text or ""
+
+        try:
+          validated_output = ComplimentOutput.model_validate_json(response_text)
+          candidates.append(validated_output)
+
+        except (json.JSONDecodeError, ValidationError) as e:
+          logger.warning(
+            "Invalid response format for candidate %s: %s",
+            i,
+            e,
+            extra={"response_text": response_text},
+          )
+          continue
+      else:
+        logger.debug("Candidate %s has no content parts", i)
 
     return (generation_metadata, candidates)

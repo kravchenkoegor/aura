@@ -8,11 +8,11 @@ export PYTHONPATH=$(pwd)
 # Wait for database
 python app/backend_pre_start.py
 
-# Run migrations only if needed (alembic will check)
-echo "Checking migrations..."
-alembic current || echo "No migrations yet"
-alembic upgrade head || echo "Migrations already up to date or failed"
+# Run migrations
+echo "Running migrations..."
+alembic upgrade head
 
+# Seed data
 python app/initial_data.py
 
 echo "Prestart completed!"

@@ -9,9 +9,6 @@ from app.core.config import settings
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-ALGORITHM = "HS256"
-
-
 def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
   """Create a new access token."""
 
@@ -20,7 +17,7 @@ def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
   encoded_jwt = jwt.encode(
     to_encode,
     settings.security.SECRET_KEY,
-    algorithm=ALGORITHM,
+    algorithm=settings.security.JWT_ALGORITHM,
   )
   return encoded_jwt
 
