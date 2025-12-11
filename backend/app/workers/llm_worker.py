@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import logging
 import os
@@ -15,12 +16,14 @@ from redis.exceptions import RedisError, ResponseError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.config import settings
 from app.core.db import async_engine
 from app.data.task import update_task
 from app.schemas import TaskStatus, TaskUpdate
 from app.service.compliment_service import ComplimentService
 from app.service.gemini_service.gemini_service import GeminiService
 from app.service.image_service import ImageService
+from app.service.llama_service import LlamaService
 
 load_dotenv()
 
@@ -107,8 +110,16 @@ async def handle_message(
 
   try:
     image_service = ImageService(session)
-    gemini_service = GeminiService(session)
     compliment_service = ComplimentService(session)
+
+    # Select LLM provider based on configuration
+    llm_provider = settings.ai.LLM_PROVIDER
+    logger.info(f"Using LLM provider: {llm_provider}")
+
+    if llm_provider == "LLAMA":
+      llm_service = LlamaService(session)
+    else:
+      llm_service = GeminiService(session)
 
     image = await image_service.get_primary_image_by_post_id(
       post_id=post_id,
@@ -117,15 +128,28 @@ async def handle_message(
     if not image:
       raise ValueError(f"No primary image found for post ID {post_id}")
 
-    async with httpx.AsyncClient() as client:
-      http_response = await client.get(image.storage_key)
-      http_response.raise_for_status()
-      image_bytes = http_response.content
+    # Handle both URL-based images (Instagram) and base64 data URLs (uploads)
+    storage_key = image.storage_key
+    if storage_key.startswith("data:"):
+      # This is a base64 data URL (from file upload)
+      # Format: data:image/jpeg;base64,/9j/4AAQ...
+      try:
+        # Extract the base64 data part after the comma
+        header, encoded = storage_key.split(",", 1)
+        image_bytes = base64.b64decode(encoded)
+      except Exception as e:
+        raise ValueError(f"Failed to decode base64 image data: {e}")
+    else:
+      # This is a URL (from Instagram)
+      async with httpx.AsyncClient() as client:
+        http_response = await client.get(storage_key)
+        http_response.raise_for_status()
+        image_bytes = http_response.content
 
     (
       generation_metadata,
       candidates_data,
-    ) = await gemini_service.create_chat(image_bytes=image_bytes)
+    ) = await llm_service.create_chat(image_bytes=image_bytes)
 
     await compliment_service.create_compliments(
       image_id=image.id,
