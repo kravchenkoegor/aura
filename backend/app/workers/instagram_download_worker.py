@@ -30,7 +30,7 @@ from app.schemas import (
   TaskStatus,
   TaskUpdate,
 )
-from app.service.instagram import download_instagram_post
+from app.service.playwright_scraper import scrape_instagram_post_with_playwright
 from app.utils.instagram import extract_shortcode_from_url
 
 load_dotenv()
@@ -151,7 +151,8 @@ async def handle_message(
       await session.commit()
       return
 
-    post_data = await asyncio.to_thread(download_instagram_post, shortcode=post_id)
+    # Use Playwright scraper instead of instaloader
+    post_data = await scrape_instagram_post_with_playwright(url=url, shortcode=post_id)
     images_to_add = post_data["images"]
     username = post_data["owner_username"]
 
