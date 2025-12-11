@@ -1,9 +1,11 @@
 import uuid
+from typing import Optional, Sequence
 
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models import Compliment
-from app.schemas import ComplimentOutput
+from app.models import Compliment, Image, Post
+from app.schemas import ComplimentOutput, ComplimentPublic
 
 
 class ComplimentService:
@@ -29,7 +31,7 @@ class ComplimentService:
 
     compliments = []
 
-    for i, candidate in enumerate(candidates, 1):
+    for _, candidate in enumerate(candidates, 1):
       compliment = Compliment(
         image_id=image_id,
         lang_id="en",
@@ -47,3 +49,26 @@ class ComplimentService:
       await self.session.refresh(compliment)
 
     return compliments
+
+  async def get_all_compliments(
+    self,
+    skip: int,
+    limit: int,
+    user_id: Optional[uuid.UUID] = None,
+  ) -> Sequence[ComplimentPublic]:
+    """Get all compliments."""
+
+    query = select(Compliment).join(Image).join(Post)
+
+    if user_id:
+      query = query.where(Post.user_id == user_id)
+
+    query = query.offset(skip).limit(limit)
+
+    result = await self.session.exec(query)
+    compliments = result.all()
+
+    return [
+      ComplimentPublic.model_validate(compliment, from_attributes=True)
+      for compliment in compliments
+    ]
