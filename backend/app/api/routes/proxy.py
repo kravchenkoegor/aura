@@ -1,4 +1,6 @@
 import asyncio
+import base64
+import io
 import logging
 import uuid
 
@@ -9,7 +11,7 @@ from fastapi import (
   Request,
   status,
 )
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import CurrentUser, ImageServiceDep
@@ -48,13 +50,46 @@ async def view_image_by_id(
   if not image:
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-  url = image.storage_key
+  storage_key = image.storage_key
 
+  # Handle base64 data URLs (from file uploads)
+  if storage_key.startswith("data:"):
+    try:
+      # Parse the data URL: data:image/jpeg;base64,<base64_data>
+      header, encoded = storage_key.split(",", 1)
+
+      # Extract MIME type from header
+      mime_type = "image/jpeg"  # default
+      if ":" in header and ";" in header:
+        mime_part = header.split(":")[1].split(";")[0]
+        if mime_part:
+          mime_type = mime_part
+
+      # Decode base64 data
+      image_bytes = base64.b64decode(encoded)
+
+      return Response(
+        content=image_bytes,
+        media_type=mime_type,
+        headers={
+          "Access-Control-Allow-Origin": "*",
+          "Cross-Origin-Resource-Policy": "cross-origin",
+        },
+      )
+
+    except Exception as e:
+      logger.error("Failed to decode base64 image: %s", e)
+      raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Failed to decode image data",
+      )
+
+  # Handle URL-based images (from Instagram)
   try:
 
     async def stream_body():
       async with httpx.AsyncClient() as client:
-        async with client.stream("GET", url) as response:
+        async with client.stream("GET", storage_key) as response:
           response.raise_for_status()
 
           async for chunk in response.aiter_bytes():
