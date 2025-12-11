@@ -30,6 +30,8 @@ from app.schemas import (
   TaskStatus,
   TaskUpdate,
 )
+from app.core.config import settings
+from app.service.instagram import download_instagram_post
 from app.service.playwright_scraper import scrape_instagram_post_with_playwright
 from app.utils.instagram import extract_shortcode_from_url
 
@@ -151,8 +153,17 @@ async def handle_message(
       await session.commit()
       return
 
-    # Use Playwright scraper instead of instaloader
-    post_data = await scrape_instagram_post_with_playwright(url=url, shortcode=post_id)
+    # Choose scraper backend based on configuration
+    scraper_backend = settings.ai.INSTAGRAM_SCRAPER
+    logger.info(f"Using Instagram scraper backend: {scraper_backend}")
+
+    if scraper_backend == "PLAYWRIGHT":
+      # Use Playwright scraper (browser automation)
+      post_data = await scrape_instagram_post_with_playwright(url=url, shortcode=post_id)
+    else:
+      # Use instaloader (default)
+      post_data = await asyncio.to_thread(download_instagram_post, shortcode=post_id)
+
     images_to_add = post_data["images"]
     username = post_data["owner_username"]
 

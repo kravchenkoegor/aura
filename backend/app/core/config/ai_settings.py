@@ -7,6 +7,9 @@ class AISettings(BaseAppConfig):
   # LLM Provider selection
   LLM_PROVIDER: Literal["GEMINI", "LLAMA"] = "GEMINI"
 
+  # Instagram Scraper backend selection
+  INSTAGRAM_SCRAPER: Literal["INSTALOADER", "PLAYWRIGHT"] = "INSTALOADER"
+
   # Gemini settings
   GEMINI_API_KEY: Optional[str] = None
   GEMINI_MODEL: Optional[str] = "gemini-flash-latest"
