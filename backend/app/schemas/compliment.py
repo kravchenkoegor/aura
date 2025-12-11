@@ -32,3 +32,22 @@ class ComplimentRequest(BaseModel):
     pattern=r"^(romantic|poetic|flirtatious|witty|curious|casual|playful)$",
     description="Style of compliment to generate",
   )
+
+
+class TranslateRequest(BaseModel):
+  target_language: str = Field(
+    ...,
+    min_length=2,
+    max_length=10,
+    pattern=r"^[a-z]{2,10}$",
+    description="Target language code (e.g., 'tr' for Turkish, 'es' for Spanish)",
+    examples=["tr", "es", "fr", "de"],
+  )
+
+
+class TranslateResponse(BaseModel):
+  compliment_id: uuid.UUID
+  original_text: str
+  original_language: str
+  translated_text: str
+  target_language: str

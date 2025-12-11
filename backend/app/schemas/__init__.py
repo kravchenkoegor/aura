@@ -1,4 +1,9 @@
-from .compliment import ComplimentPublic, ComplimentRequest
+from .compliment import (
+  ComplimentPublic,
+  ComplimentRequest,
+  TranslateRequest,
+  TranslateResponse,
+)
 from .compliment_output_schema import ComplimentOutput
 from .image import ImagePublic
 from .instagram import InstagramUrlRequest
@@ -11,6 +16,7 @@ from .password import (
 from .post import PostCreate, PostPublic, PostUpdate
 from .task import TaskCreate, TaskPublic, TaskStatus, TaskType, TaskUpdate
 from .token import Token, TokenPayload
+from .upload import ImageUploadRequest, ImageUploadResponse
 from .user import (
   UserBase,
   UserCreate,
@@ -28,6 +34,8 @@ __all__ = [
   "ForgotPassword",
   "InstagramUrlRequest",
   "ImagePublic",
+  "ImageUploadRequest",
+  "ImageUploadResponse",
   "Message",
   "NewPassword",
   "UpdatePassword",
@@ -41,6 +49,8 @@ __all__ = [
   "TaskUpdate",
   "Token",
   "TokenPayload",
+  "TranslateRequest",
+  "TranslateResponse",
   "UserBase",
   "UserCreate",
   "UserPublic",

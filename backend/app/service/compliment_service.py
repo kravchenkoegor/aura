@@ -1,11 +1,14 @@
 import uuid
-from typing import Optional, Sequence
+from typing import Optional, Sequence, TYPE_CHECKING
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import Compliment, Image, Post
 from app.schemas import ComplimentOutput, ComplimentPublic
+
+if TYPE_CHECKING:
+  from app.service.gemini_service import GeminiService
 
 
 class ComplimentService:
@@ -72,3 +75,45 @@ class ComplimentService:
       ComplimentPublic.model_validate(compliment, from_attributes=True)
       for compliment in compliments
     ]
+
+  async def get_compliment_by_id(
+    self,
+    compliment_id: uuid.UUID,
+  ) -> Optional[Compliment]:
+    """Get a compliment by ID."""
+
+    return await self.session.get(Compliment, compliment_id)
+
+  async def translate_compliment(
+    self,
+    compliment_id: uuid.UUID,
+    target_language: str,
+    gemini_service: "GeminiService",
+  ) -> tuple[str, str]:
+    """
+    Translate a compliment to the target language.
+
+    Args:
+      compliment_id: The ID of the compliment to translate
+      target_language: The target language code (e.g., 'tr' for Turkish)
+      gemini_service: The Gemini service instance to use for translation
+
+    Returns:
+      A tuple of (original_text, translated_text)
+
+    Raises:
+      ValueError: If compliment is not found
+    """
+
+    compliment = await self.get_compliment_by_id(compliment_id)
+
+    if not compliment:
+      raise ValueError(f"Compliment with ID {compliment_id} not found")
+
+    # Translate the compliment text
+    translated_text = await gemini_service.translate(
+      text=compliment.text,
+      target_language=target_language,
+    )
+
+    return (compliment.text, translated_text)

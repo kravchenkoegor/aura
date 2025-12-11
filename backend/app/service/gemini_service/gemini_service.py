@@ -48,6 +48,30 @@ class GeminiService:
 
     return system_prompt_path.read_text()
 
+  def _get_translation_system_prompt(self) -> str:
+    """Get the translation system prompt from the configured file path."""
+    system_prompt_path = Path("app/service/gemini_service/prompts/translate/system.md")
+
+    if not system_prompt_path.exists():
+      logger.error("Translation system prompt file not found at %s", system_prompt_path)
+      raise FileNotFoundError(
+        f"Translation system prompt file not found: {system_prompt_path}",
+      )
+
+    return system_prompt_path.read_text()
+
+  def _get_translation_user_prompt(self) -> str:
+    """Get the translation user prompt from the configured file path."""
+    user_prompt_path = Path("app/service/gemini_service/prompts/translate/user.md")
+
+    if not user_prompt_path.exists():
+      logger.error("Translation user prompt file not found at %s", user_prompt_path)
+      raise FileNotFoundError(
+        f"Translation user prompt file not found: {user_prompt_path}",
+      )
+
+    return user_prompt_path.read_text()
+
   @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
@@ -129,3 +153,69 @@ class GeminiService:
         logger.debug("Candidate %s has no content parts", i)
 
     return (generation_metadata, candidates)
+
+  @retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    reraise=True,
+  )
+  async def translate(
+    self,
+    text: str,
+    target_language: str = "tr",
+  ) -> str:
+    """
+    Translate text to the target language using Gemini.
+
+    Args:
+      text: The text to translate
+      target_language: The target language code (e.g., 'tr' for Turkish)
+
+    Returns:
+      The translated text
+    """
+
+    logger.info(
+      "Translating text to %s using Gemini API model: %s",
+      target_language,
+      self.model,
+    )
+
+    # Get translation prompts
+    system_prompt = self._get_translation_system_prompt()
+    user_prompt = self._get_translation_user_prompt()
+
+    # Combine user prompt with the text to translate
+    full_prompt = f"{user_prompt}\n\n\"{text}\""
+
+    if not self.model:
+      raise ValueError("GEMINI_MODEL is not set")
+
+    # Create a chat with translation-specific configuration
+    chat = self.client.aio.chats.create(
+      model=self.model,
+      config=types.CreateChatConfig(
+        system_instruction=system_prompt,
+      ),
+    )
+
+    # Send translation request
+    response = await chat.send_message(
+      message=full_prompt,
+      config=types.GenerateContentConfig(
+        temperature=0.4,
+        top_p=0.8,
+        candidate_count=1,
+      ),
+    )
+
+    # Extract translated text from response
+    if response.candidates and len(response.candidates) > 0:
+      candidate = response.candidates[0]
+      if candidate.content and candidate.content.parts:
+        translated_text = candidate.content.parts[0].text
+        if translated_text:
+          return translated_text.strip()
+
+    logger.error("No translation result received from Gemini API")
+    raise ValueError("No translation result received")
