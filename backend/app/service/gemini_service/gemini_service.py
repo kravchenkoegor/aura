@@ -186,7 +186,7 @@ class GeminiService:
     user_prompt = self._get_translation_user_prompt()
 
     # Combine user prompt with the text to translate
-    full_prompt = f"{user_prompt}\n\n\"{text}\""
+    full_prompt = f'{user_prompt}\n\n"{text}"'
 
     if not self.model:
       raise ValueError("GEMINI_MODEL is not set")

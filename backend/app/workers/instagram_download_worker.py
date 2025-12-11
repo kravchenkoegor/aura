@@ -14,6 +14,7 @@ from redis.exceptions import RedisError, ResponseError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.config import settings
 from app.core.db import async_engine
 from app.data.author import (
   create_author,
@@ -30,7 +31,6 @@ from app.schemas import (
   TaskStatus,
   TaskUpdate,
 )
-from app.core.config import settings
 from app.service.instagram import download_instagram_post
 from app.service.playwright_scraper import scrape_instagram_post_with_playwright
 from app.utils.instagram import extract_shortcode_from_url
@@ -159,7 +159,9 @@ async def handle_message(
 
     if scraper_backend == "PLAYWRIGHT":
       # Use Playwright scraper (browser automation)
-      post_data = await scrape_instagram_post_with_playwright(url=url, shortcode=post_id)
+      post_data = await scrape_instagram_post_with_playwright(
+        url=url, shortcode=post_id
+      )
     else:
       # Use instaloader (default)
       post_data = await asyncio.to_thread(download_instagram_post, shortcode=post_id)
